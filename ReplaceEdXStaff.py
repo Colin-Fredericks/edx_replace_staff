@@ -8,6 +8,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 instructions = """
 to run:
@@ -85,9 +87,9 @@ the script is to run. Press control-C to cancel.
         reader = csv.DictReader(file)
 
         # Open the edX sign-in page
-        access_success = False
-        # Sign in
         driver.get(login_page)
+
+        # Sign in
         driver.find_elements(By.CSS_SELECTOR, username_input)
         driver.clear()
         driver.send_keys(username)
@@ -95,51 +97,73 @@ the script is to run. Press control-C to cancel.
         driver.clear()
         driver.send_keys(password)
 
-        assert "Dashboard" in driver.title, "Could not log in or dashboard timed out."
-
-        # if not access_success:
-        #     skipped_classes.append(each_row)
+        # Check to make sure we're signed in
+        try:
+            element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "my-courses"))
+            )
+        except:
+            assert (
+                "Dashboard" in driver.title
+            ), "Could not log in or dashboard timed out."
 
         # For each line in the CSV...
         for each_row in reader:
             print(each_row)
 
             # Open the URL.
-            # If we can't open the URL:
-            # Make a note and skip this course.
-            # Wait for load.
+            driver.get(each_row["URL"])
+
+            # Wait for the page to load.
+            try:
+                element = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, new_team_button))
+                )
+            except:
+                # If we can't open the URL, make a note and skip this course.
+                skipped_classes.append(each_row)
+                assert (
+                    "Dashboard" in driver.title
+                ), "Could not log in or dashboard timed out."
+
             # If we have people to add...
-            # Split the Add string by spaces
-            # For each Add address:
-            # Click the "New Team Member" button
-            # Put the e-mail into the input box
-            # Click "Add User"
-            # Wait for load.
-            # If there's an error message:
-            # Make a note and move on.
-            # Otherwise
-            # Remove that e-mail address from the Add list in the new dict.
-            # If we have people to remove...
-            # Split the Remove string by spaces
-            # For each Remove address:
-            # Find the e-mail address on the page.
-            # Click the trash can ("remove user" button)
-            # Wait for load.
-            # If there's an error message:
-            # Make a note and move on.
-            # Otherwise
-            # Remove that e-mail address from the Remove list in the new dict.
+            if len(each_row["Add"]) > 0:
+                to_add = each_row["Add"].split(" ")
+                # For each Add address:
+                for email in to_add:
+                    pass
 
-    # Write out a new csv with the ones we couldn't do.
-    """
-    with open("remaining_courses.csv", "w", newline="") as remaining_courses:
-        fieldnames = ["Course", "URL", "Add", "Remove"]
-        writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
+                # Click the "New Team Member" button
+                # Put the e-mail into the input box
+                # Click "Add User"
+                # Wait for load.
+                # If there's an error message:
+                # Make a note and move on.
+                # Otherwise
+                # Remove that e-mail address from the Add list in the new dict.
 
-        writer.writeheader()
-        for x in skipped_classes:
-            writer.writerow(x)
-    """
+                # If we have people to remove...
+                # Split the Remove string by spaces
+                # For each Remove address:
+                # Find the e-mail address on the page.
+                # Click the trash can ("remove user" button)
+                # Wait for load.
+                # If there's an error message:
+                # Make a note and move on.
+                # Otherwise
+                # Remove that e-mail address from the Remove list in the new dict.
+
+        # Write out a new csv with the ones we couldn't do.
+        if len(skipped_classes) > 0:
+            with open("remaining_courses.csv", "w", newline="") as remaining_courses:
+                fieldnames = ["Course", "URL", "Add", "Remove"]
+                writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
+
+                writer.writeheader()
+                for x in skipped_classes:
+                    writer.writerow(x)
+        else:
+            print("Successful in all " + str(len(reader)) + "courses.")
 
     # Done.
     driver.quit()
