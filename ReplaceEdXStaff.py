@@ -30,8 +30,8 @@ and which people couldn't be removed.
 """
 
 
+# Instantiating a headless Chrome browser
 def setUpWebdriver():
-    # Instantiating a headless Chrome browser
     print("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + "."
     c = Options()
@@ -124,8 +124,8 @@ def promoteStaff(driver, email_list):
 
 def removeStaff(driver, email_list):
 
-    # Locations for remove-staff inputs
-    # This will be inside an LI with data-email equal to the user's email address
+    # The "remove" button will be inside an LI
+    # with data-email equal to the user's email address
     remove_user_css = "a.remove-user"
     confirm_removal_css = "#prompt-warning.is-shown button.action-primary"
 
@@ -134,13 +134,14 @@ def removeStaff(driver, email_list):
         print("Finding " + email)
         # Click the trash can ("remove user" button)
         # E-mails in the data attribute are lowercased.
-        remove_button = driver.find_elements(
-            By.CSS_SELECTOR, "li[data-email='" + email.lower() + "'] " + remove_user_css
-        )
+        removal_button = "li[data-email='" + email.lower() + "'] " + remove_user_css
+        print(removal_button)
+        remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button)
         if len(remove_button) > 0:
             remove_button[0].click()
             # Click the "confirm" button.
             print("Removing " + email)
+
             driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)[0].click()
             # try:
             #     element = WebDriverWait(driver, 5).until(
@@ -154,7 +155,7 @@ def removeStaff(driver, email_list):
             #     driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)[0].click()
         else:
             # If we can't find the e-mail address, they weren't in the class anyway.
-            print(email + " was not in this course.")
+            print(email + " was already not in this course.")
 
     return
 
@@ -214,7 +215,7 @@ the script is to run. Press control-C to cancel.
             num_classes = num_classes + 1
 
             # Open the URL.
-            driver.get(each_row["URL"])
+            driver.get(each_row["URL"].strip())
 
             # Wait for the page to load.
             try:
@@ -241,7 +242,6 @@ the script is to run. Press control-C to cancel.
             for j in jobs:
                 # Taking out whitespace.
                 # Split e-mail list on spaces and throw out blank elements.
-                # print(j + ": " + each_row[j])
                 email_list_with_blanks = each_row[j].split(" ")
                 email_list = [x for x in email_list_with_blanks if x != ""]
                 if len(each_row[j]) > 0:
