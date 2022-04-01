@@ -20,7 +20,9 @@ Course - course name or identifier (optional)
 URL - the address of class' Course Team Settings page
 Add - the e-mail addresses of the staff to be added. (not usernames)
       If there are multiple staff, space-separate them.
-Remove - just like "Add".
+Promote - promote these people to Admin status
+Remove - just like "Add"
+Demote - removes Admin status
 
 The output is another CSV file that shows which courses couldn't be accessed
 and which people couldn't be removed.
@@ -40,12 +42,12 @@ def ReplaceEdXStaff():
     password_input = "#password"
     login_button = ".login-button-width"
     # Adding staff
-    new_team_button = "a.create-user-button"
-    new_staff_email_input = "input#user-email-input"
-    add_user_button = "div.actions button.action-primary"
+    new_team_css = "a.create-user-button"
+    new_staff_email_css = "input#user-email-input"
+    add_user_css = "div.actions button.action-primary"
     # Removing staff
     staff_email_location = "span.user-email"
-    remove_user_button = "a.remove-user"  # This will have data-id = the email address.
+    remove_user_css = "a.remove-user"  # This will have data-id = the email address.
 
     num_classes = 0
     num_classes_fixed = 0
@@ -105,7 +107,7 @@ the script is to run. Press control-C to cancel.
         except:
             assert (
                 "Dashboard" in driver.title
-            ), "Could not log in or dashboard timed out."
+            ), "Could not log into edX or course dashboard page timed out."
 
         # For each line in the CSV...
         for each_row in reader:
@@ -117,7 +119,7 @@ the script is to run. Press control-C to cancel.
             # Wait for the page to load.
             try:
                 element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, new_team_button))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, new_team_css))
                 )
             except:
                 # If we can't open the URL, make a note and skip this course.
@@ -131,27 +133,54 @@ the script is to run. Press control-C to cancel.
                 to_add = each_row["Add"].split(" ")
                 # For each Add address:
                 for email in to_add:
+                    # Click the "New Team Member" button
+                    new_team_button = driver.find_elements(
+                        by.CSS_SELECTOR, new_team_css
+                    )
+                    new_team_button.click()
+                    # Put the e-mail into the input box
+                    email_box = driver.find_elements(
+                        by.CSS_SELECTOR, new_staff_email_css
+                    )
+                    email_box.clear()
+                    email_box.keys(email)
+                    # Click "Add User"
+                    add_user_button = driver.find_elements(
+                        by.CSS_SELECTOR, add_user_css
+                    )
+                    add_user_button.click()
                     pass
 
-                # Click the "New Team Member" button
-                # Put the e-mail into the input box
-                # Click "Add User"
-                # Wait for load.
                 # If there's an error message:
-                # Make a note and move on.
-                # Otherwise
-                # Remove that e-mail address from the Add list in the new dict.
+                #   Wrong e-mail address:
+                #     wrong_email = "#prompt-error.is-shown"
+                #   Already on course team:
+                #     already_on_team = "#prompt-warning.is-shown"
+                #   Click the ".action-primary" button in that div to say "ok"
 
                 # If we have people to remove...
                 # Split the Remove string by spaces
                 # For each Remove address:
                 # Find the e-mail address on the page.
+                # If you can find it:
                 # Click the trash can ("remove user" button)
-                # Wait for load.
-                # If there's an error message:
+                # Click the ".action-primary" button inside "#prompt-warning.is-shown"
+                # If we can't find the e-mail address, no one cares.
                 # Make a note and move on.
                 # Otherwise
                 # Remove that e-mail address from the Remove list in the new dict.
+
+                # Promote/demote have no confirm buttons.
+                # If we have people to promote...
+                #   Split the Promote string by spaces
+                #   For each Promote address:
+                #     Find the li with data-email matching this one.
+                #     Click the ".make-instructor.admin-role.add-admin-role" link
+                # If we have people to demote...
+                #   Split the Demote string by spaces
+                #   For each Demote address:
+                #     Find the li with data-email matching this one.
+                #     Click the ".make-staff.admin-role.remove-admin-role" link
 
         # Write out a new csv with the ones we couldn't do.
         if len(skipped_classes) > 0:
