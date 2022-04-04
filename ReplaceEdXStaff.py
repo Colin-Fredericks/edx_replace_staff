@@ -13,6 +13,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+# TODO: Better tracking of what we had to skip.
+# TODO: Handle errors on add
+
 instructions = """
 to run:
 python3 ReplaceEdXStaff.py filename.csv
@@ -87,6 +90,9 @@ def addStaff(driver, email_list):
     new_team_css = "a.create-user-button"
     new_staff_email_css = "input#user-email-input"
     add_user_css = "div.actions button.action-primary"
+    wrong_email_css = "#prompt-error.is-shown"
+    already_on_team_css = "#prompt-warning.is-shown"
+    ok_button_css = "button.action-primary"
 
     # For each address:
     for email in email_list:
@@ -108,26 +114,34 @@ def addStaff(driver, email_list):
                 # Click "Add User"
                 add_user_button = driver.find_elements(By.CSS_SELECTOR, add_user_css)[0]
                 add_user_button.click()
-                # If there's an error message, it's fine. Click the "ok" button.
-                wrong_email_css = "#prompt-error.is-shown"
-                already_on_team_css = "#prompt-warning.is-shown"
-                ok_button_css = "button.action-primary"
 
                 # TODO: This part isn't working. Not sure why.
-                if len(driver.find_elements(By.CSS_SELECTOR, wrong_email_css)) > 0:
+                # If there's an error message, it's fine. Click the "ok" button.
+                wrong_email_alert = driver.find_elements(
+                    By.CSS_SELECTOR, wrong_email_css
+                )
+                already_on_team_alert = driver.find_elements(
+                    By.CSS_SELECTOR, already_on_team_css
+                )
+                if len(wrong_email_alert) > 0:
+                    print("No user with email " + email)
                     ok_button = driver.findElements(
-                        By.CSS_SELECTOR, wrong_email + " " + ok_button_css
+                        By.CSS_SELECTOR, wrong_email_css + " " + ok_button_css
                     )
-                    print(email + " could not be found.")
-                if len(driver.find_elements(By.CSS_SELECTOR, already_on_team_css)) > 0:
+                    ok_button[0].click()
+                    continue
+                elif len(already_on_team_alert) > 0:
                     ok_button = driver.findElements(
-                        By.CSS_SELECTOR, already_on_team + " " + ok_button_css
+                        By.CSS_SELECTOR, already_on_team_css + " " + ok_button_css
                     )
+                    ok_button[0].click()
                     print(email + " is already on the team.")
+                    continue
 
                 keep_going = False
 
-            except:
+            except Exception as e:
+                print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
                 loops = loops + 1
@@ -198,7 +212,8 @@ def removeStaff(driver, email_list):
                 confirm_button[0].click()
                 keep_going = False
 
-            except:
+            except Exception as e:
+                print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
                 loops = loops + 1
@@ -229,7 +244,8 @@ def demoteStaff(driver, email_list):
                 demotion_button = driver.find_elements(By.CSS_SELECTOR, demotion_css)
                 demotion_button[0].click()
                 keep_going = False
-            except:
+            except Exception as e:
+                print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
                 loops = loops + 1
