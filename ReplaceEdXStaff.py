@@ -89,34 +89,49 @@ def addStaff(driver, email_list):
 
     # For each address:
     for email in email_list:
-        print("Adding " + email)
-        # Click the "New Team Member" button
-        new_team_button = driver.find_elements(By.CSS_SELECTOR, new_team_css)[0]
-        new_team_button.click()
-        # Put the e-mail into the input box
-        email_box = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)[0]
-        email_box.clear()
-        email_box.send_keys(email)
-        # Click "Add User"
-        add_user_button = driver.find_elements(By.CSS_SELECTOR, add_user_css)[0]
-        add_user_button.click()
+        keep_going = True
+        loops = 0
+        max_loops = 5
+        while keep_going:
+            print("Adding " + email)
+            try:
+                # Click the "New Team Member" button
+                new_team_button = driver.find_elements(By.CSS_SELECTOR, new_team_css)[0]
+                new_team_button.click()
+                # Put the e-mail into the input box.
+                email_box = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)[
+                    0
+                ]
+                email_box.clear()
+                email_box.send_keys(email)
+                # Click "Add User"
+                add_user_button = driver.find_elements(By.CSS_SELECTOR, add_user_css)[0]
+                add_user_button.click()
+                # If there's an error message, it's fine. Click the "ok" button.
+                wrong_email_css = "#prompt-error.is-shown"
+                already_on_team_css = "#prompt-warning.is-shown"
+                ok_button_css = "button.action-primary"
 
-        # If there's an error message, it's fine. Click the "ok" button.
-        wrong_email_css = "#prompt-error.is-shown"
-        already_on_team_css = "#prompt-warning.is-shown"
-        ok_button_css = "button.action-primary"
+                # TODO: This part isn't working. Not sure why.
+                if len(driver.find_elements(By.CSS_SELECTOR, wrong_email_css)) > 0:
+                    ok_button = driver.findElements(
+                        By.CSS_SELECTOR, wrong_email + " " + ok_button_css
+                    )
+                    print(email + " could not be found.")
+                if len(driver.find_elements(By.CSS_SELECTOR, already_on_team_css)) > 0:
+                    ok_button = driver.findElements(
+                        By.CSS_SELECTOR, already_on_team + " " + ok_button_css
+                    )
+                    print(email + " is already on the team.")
 
-        # TODO: This part isn't working. Not sure why.
-        if len(driver.find_elements(By.CSS_SELECTOR, wrong_email_css)) > 0:
-            ok_button = driver.findElements(
-                By.CSS_SELECTOR, wrong_email + " " + ok_button_css
-            )
-            print(email + " could not be found.")
-        if len(driver.find_elements(By.CSS_SELECTOR, already_on_team_css)) > 0:
-            ok_button = driver.findElements(
-                By.CSS_SELECTOR, already_on_team + " " + ok_button_css
-            )
-            print(email + " is already on the team.")
+                keep_going = False
+
+            except:
+                # Keep trying up to 5 times.
+                print("Trying again...")
+                loops = loops + 1
+                if loops > max_loops:
+                    keep_going = False
 
     return
 
@@ -143,9 +158,7 @@ def removeStaff(driver, email_list):
         print("Finding " + email)
         # E-mail addresses in the data attribute are lowercased.
         removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
-        print(removal_button_css)
         remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button_css)
-        print(remove_button)
         if len(remove_button) > 0:
             # Click the trash can ("remove user" button)
             remove_button[0].click()
@@ -216,6 +229,7 @@ the script is to run. Press control-C to cancel.
         for each_row in reader:
             print("Processing line:")
             print(each_row)
+            print(each_row["URL"].strip())
             num_classes = num_classes + 1
 
             # Open the URL.
