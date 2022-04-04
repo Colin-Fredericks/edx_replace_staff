@@ -3,6 +3,7 @@
 import os
 import csv
 import sys
+import time
 import argparse
 from getpass import getpass
 from selenium import webdriver
@@ -37,7 +38,7 @@ def setUpWebdriver():
     c = Options()
     # c.add_argument("--headless")
     driver = webdriver.Chrome(options=c)
-    driver.implicitly_wait(3)
+    driver.implicitly_wait(2)
     return driver
 
 
@@ -91,7 +92,7 @@ def addStaff(driver, email_list):
     for email in email_list:
         keep_going = True
         loops = 0
-        max_loops = 5
+        max_loops = 3
         while keep_going:
             print("Adding " + email)
             try:
@@ -127,7 +128,7 @@ def addStaff(driver, email_list):
                 keep_going = False
 
             except:
-                # Keep trying up to 5 times.
+                # Keep trying up to 3 times.
                 print("Trying again...")
                 loops = loops + 1
                 if loops > max_loops:
@@ -137,10 +138,32 @@ def addStaff(driver, email_list):
 
 
 def promoteStaff(driver, email_list):
-    # Promote/demote have no confirm buttons.
-    #   For each Promote address:
-    #     Find the li with data-email matching this one.
-    #     Click the ".make-instructor.admin-role.add-admin-role" link
+    # For each address:
+    for email in email_list:
+        # Find the promotion button for this user.
+        promotion_css = (
+            "li[data-email='"
+            + email.lower()
+            + "'] a.make-instructor.admin-role.add-admin-role"
+        )
+        keep_going = True
+        loops = 0
+        max_loops = 3
+
+        while keep_going:
+            print("Promoting " + email)
+            try:
+                # Click the "New Team Member" button
+                promotion_button = driver.find_elements(By.CSS_SELECTOR, promotion_css)
+                promotion_button[0].click()
+                keep_going = False
+            except Exception as e:
+                print(repr(e))
+                # Keep trying up to 3 times.
+                print("Trying again...")
+                loops = loops + 1
+                if loops > max_loops:
+                    keep_going = False
 
     return
 
@@ -154,30 +177,65 @@ def removeStaff(driver, email_list):
 
     # For each address:
     for email in email_list:
-        print(driver.title)
-        print("Finding " + email)
-        # E-mail addresses in the data attribute are lowercased.
         removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
-        remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button_css)
-        if len(remove_button) > 0:
-            # Click the trash can ("remove user" button)
-            remove_button[0].click()
-            # Click the "confirm" button.
-            print("Removing " + email)
-            confirm_button = driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)
-            confirm_button[0].click()
-        else:
-            # If we can't find the e-mail address, they weren't in the class anyway.
-            print(email + " was already not in this course.")
+        keep_going = True
+        loops = 0
+        max_loops = 3
+        while keep_going:
+            print("Finding " + email)
+            try:
+                # E-mail addresses in the data attribute are lowercased.
+                remove_button = driver.find_elements(
+                    By.CSS_SELECTOR, removal_button_css
+                )
+                # Click the trash can ("remove user" button)
+                remove_button[0].click()
+                # Click the "confirm" button.
+                print("Removing " + email)
+                confirm_button = driver.find_elements(
+                    By.CSS_SELECTOR, confirm_removal_css
+                )
+                confirm_button[0].click()
+                keep_going = False
+
+            except:
+                # Keep trying up to 3 times.
+                print("Trying again...")
+                loops = loops + 1
+                if loops > max_loops:
+                    print(email + " was already not in this course.")
+                    keep_going = False
 
     return
 
 
 def demoteStaff(driver, email_list):
-    # Promote/demote have no confirm buttons.
-    #   For each Demote address:
-    #     Find the li with data-email matching this one.
-    #     Click the ".make-staff.admin-role.remove-admin-role" link
+    # For each address:
+    for email in email_list:
+        # Find the demotion button for this user.
+        demotion_css = (
+            "li[data-email='"
+            + email.lower()
+            + "'] a.make-staff.admin-role.remove-admin-role"
+        )
+        keep_going = True
+        loops = 0
+        max_loops = 3
+
+        while keep_going:
+            print("Demoting " + email)
+            try:
+                # Click the "New Team Member" button
+                demotion_button = driver.find_elements(By.CSS_SELECTOR, demotion_css)
+                demotion_button[0].click()
+                keep_going = False
+            except:
+                # Keep trying up to 3 times.
+                print("Trying again...")
+                loops = loops + 1
+                if loops > max_loops:
+                    keep_going = False
+
     return
 
 
@@ -227,30 +285,33 @@ the script is to run. Press control-C to cancel.
 
         # For each line in the CSV...
         for each_row in reader:
-            print("Processing line:")
-            print(each_row)
-            print(each_row["URL"].strip())
-            num_classes = num_classes + 1
+            # print("Processing line:")
+            # print(each_row)
+            num_classes += 1
 
             # Open the URL.
             driver.get(each_row["URL"].strip())
 
-            # Wait for the page to load.
+            # Check to make sure we've opened a new page.
+            # The e-mail input box should be invisible.
             try:
-                new_team_css = "a.create-user-button"
-                element = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, new_team_css))
+                WebDriverWait(driver, 10).until(
+                    EC.invisibility_of_element_located(
+                        (By.CSS_SELECTOR, "input#user-email-input")
+                    )
                 )
-            except:
+            except Exception as e:
+                print(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
                 if "Forbidden" in driver.title:
                     print("Could not open course " + each_row["URL"])
                 if "Dashboard" in driver.title:
-                    print("Course load timed out.")
+                    print("Course Team page load timed out.")
                 continue
 
-            # Functions to call for each task:
+            print(driver.title)
+            # Functions to call for each task. As of Python 3.6 they'll stay in this order.
             jobs = {
                 "Add": addStaff,
                 "Promote": promoteStaff,
@@ -264,6 +325,9 @@ the script is to run. Press control-C to cancel.
                 email_list = [x for x in email_list_with_blanks if x != ""]
                 if len(each_row[j]) > 0:
                     jobs[j](driver, email_list)
+                    # You have to wait because I don't even know why.
+                    # Otherwise it skips lines - sometimes up to half of them.
+                    time.sleep(2)
 
         # Write out a new csv with the ones we couldn't do.
         if len(skipped_classes) > 0:
@@ -275,7 +339,7 @@ the script is to run. Press control-C to cancel.
                 for x in skipped_classes:
                     writer.writerow(x)
         else:
-            print("Successful in all " + str(num_classes) + " courses.")
+            print("Total: " + str(num_classes) + " courses.")
 
     # Done.
     driver.quit()
