@@ -119,6 +119,11 @@ def addStaff(driver, email_list):
 
 
 def promoteStaff(driver, email_list):
+    # Promote/demote have no confirm buttons.
+    #   For each Promote address:
+    #     Find the li with data-email matching this one.
+    #     Click the ".make-instructor.admin-role.add-admin-role" link
+
     return
 
 
@@ -135,7 +140,6 @@ def removeStaff(driver, email_list):
         # Click the trash can ("remove user" button)
         # E-mails in the data attribute are lowercased.
         removal_button = "li[data-email='" + email.lower() + "'] " + remove_user_css
-        print(removal_button)
         remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button)
         if len(remove_button) > 0:
             remove_button[0].click()
@@ -161,6 +165,10 @@ def removeStaff(driver, email_list):
 
 
 def demoteStaff(driver, email_list):
+    # Promote/demote have no confirm buttons.
+    #   For each Demote address:
+    #     Find the li with data-email matching this one.
+    #     Click the ".make-staff.admin-role.remove-admin-role" link
     return
 
 
@@ -246,18 +254,6 @@ the script is to run. Press control-C to cancel.
                 email_list = [x for x in email_list_with_blanks if x != ""]
                 if len(each_row[j]) > 0:
                     jobs[j](driver, email_list)
-
-                # Promote/demote have no confirm buttons.
-                # If we have people to promote...
-                #   Split the Promote string by spaces
-                #   For each Promote address:
-                #     Find the li with data-email matching this one.
-                #     Click the ".make-instructor.admin-role.add-admin-role" link
-                # If we have people to demote...
-                #   Split the Demote string by spaces
-                #   For each Demote address:
-                #     Find the li with data-email matching this one.
-                #     Click the ".make-staff.admin-role.remove-admin-role" link
 
         # Write out a new csv with the ones we couldn't do.
         if len(skipped_classes) > 0:
