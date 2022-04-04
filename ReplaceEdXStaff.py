@@ -37,7 +37,7 @@ def setUpWebdriver():
     c = Options()
     # c.add_argument("--headless")
     driver = webdriver.Chrome(options=c)
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(3)
     return driver
 
 
@@ -65,13 +65,16 @@ def signIn(driver, username, password):
 
     # Check to make sure we're signed in
     try:
-        element = WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.ID, "my-courses"))
+        found_dashboard = WebDriverWait(driver, 10).until(
+            EC.title_contains("Dashboard")
         )
     except:
-        assert (
-            "Dashboard" in driver.title
-        ), "Could not log into edX or course dashboard page timed out."
+        driver.close()
+        if "Forbidden" in driver.title:
+            sys.exit("403: Forbidden")
+        if "Login" in driver.title:
+            sys.exit("Took too long to log in.")
+        sys.exit("Could not log into edX or course dashboard page timed out.")
 
     print("Logged in.")
     return
@@ -129,34 +132,27 @@ def promoteStaff(driver, email_list):
 
 def removeStaff(driver, email_list):
 
-    # The "remove" button will be inside an LI
-    # with data-email equal to the user's email address
-    remove_user_css = "a.remove-user"
+    # The "remove" button is a link inside an LI.
+    # The LI has data-email equal to the user's email address.
+    trash_can_css = "a.remove-user"
     confirm_removal_css = "#prompt-warning.is-shown button.action-primary"
 
     # For each address:
     for email in email_list:
+        print(driver.title)
         print("Finding " + email)
-        # Click the trash can ("remove user" button)
-        # E-mails in the data attribute are lowercased.
-        removal_button = "li[data-email='" + email.lower() + "'] " + remove_user_css
-        remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button)
+        # E-mail addresses in the data attribute are lowercased.
+        removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
+        print(removal_button_css)
+        remove_button = driver.find_elements(By.CSS_SELECTOR, removal_button_css)
+        print(remove_button)
         if len(remove_button) > 0:
+            # Click the trash can ("remove user" button)
             remove_button[0].click()
             # Click the "confirm" button.
             print("Removing " + email)
-
-            driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)[0].click()
-            # try:
-            #     element = WebDriverWait(driver, 5).until(
-            #         EC.presence_of_element_located((By.ID, confirm_removal_css))
-            #     )
-            # except:
-            #     ## TODO: This is firing when it shouldn't.
-            #     print("Could not find OK button for removal.")
-            # finally:
-            #     print("Removing " + email)
-            #     driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)[0].click()
+            confirm_button = driver.find_elements(By.CSS_SELECTOR, confirm_removal_css)
+            confirm_button[0].click()
         else:
             # If we can't find the e-mail address, they weren't in the class anyway.
             print(email + " was already not in this course.")
