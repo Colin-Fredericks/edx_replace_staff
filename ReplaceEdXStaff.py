@@ -45,6 +45,15 @@ def setUpWebdriver():
     return driver
 
 
+def userIsPresent(driver, email):
+    user_present_css = "li[data-email='" + email.lower() + "']"
+    user_present = driver.find_elements(By.CSS_SELECTOR, user_present_css)
+    if len(user_present) > 0:
+        return True
+    else:
+        return False
+
+
 def signIn(driver, username, password):
 
     # Locations
@@ -87,60 +96,82 @@ def signIn(driver, username, password):
 def addStaff(driver, email_list):
 
     # Locations for add-staff inputs
+    wrong_email_css = "#prompt-error.is-shown button.action-primary"
     new_team_css = "a.create-user-button"
     new_staff_email_css = "input#user-email-input"
     add_user_css = "div.actions button.action-primary"
-    wrong_email_css = "#prompt-error.is-shown"
-    already_on_team_css = "#prompt-warning.is-shown"
-    ok_button_css = "button.action-primary"
-
-    print(email_list)
 
     # For each address:
     for email in email_list:
+        success = False
+
+        # If the user is already present, move to the next e-mail address.
+        if userIsPresent(driver, email) > 0:
+            print(email + " is already on course team.")
+            continue
+
         # Retry up to 3 times.
         for x in range(0, 3):
             print("Adding " + email)
-            try:
-                # Click the "New Team Member" button
-                new_team_buttons = driver.find_elements(By.CSS_SELECTOR, new_team_css)
-                new_team_buttons[0].click()
-                # Put the e-mail into the input box.
-                email_boxes = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)
-                email_boxes[0].clear()
-                email_boxes[0].send_keys(email)
-                # Click "Add User"
-                add_user_buttons = driver.find_elements(By.CSS_SELECTOR, add_user_css)
-                add_user_buttons[0].click()
 
-                # TODO: This part isn't working. Not sure why.
-                # If there's an error message, it's fine. Click the "ok" button.
-                wrong_email_alert = driver.find_elements(
-                    By.CSS_SELECTOR, wrong_email_css
-                )
-                already_on_team_alert = driver.find_elements(
-                    By.CSS_SELECTOR, already_on_team_css
-                )
-                if len(wrong_email_alert) > 0:
-                    print("No user with email " + email)
-                    ok_buttons = driver.find_elements(
-                        By.CSS_SELECTOR, wrong_email_css + " " + ok_button_css
+            # Try to find the "ok" button for the error dialogs.
+            wrong_email_ok_button = driver.find_elements(
+                By.CSS_SELECTOR, wrong_email_css
+            )
+            # If there is an error dialog open, report why, clear it, and move on.
+            if len(wrong_email_ok_button) > 0:
+                print("error dialog open")
+                try:
+                    print("No edX user with email " + email)
+                    wrong_email_ok_button[0].click()
+                    # Move to the next e-mail address.
+                    success = True
+                    break
+
+                except Exception as e:
+                    print("Couldn't click dialog, trying again...")
+                    # print(repr(e))
+                    # Give it another shot, sometimes delaying helps.
+                    continue
+
+            # If there isn't a dialog open, try to add the team member.
+            else:
+                # print("No error dialog")
+                try:
+                    # Click the "New Team Member" button
+                    # print("click new team")
+                    new_team_buttons = driver.find_elements(
+                        By.CSS_SELECTOR, new_team_css
                     )
-                    ok_buttons[0].click()
-                elif len(already_on_team_alert) > 0:
-                    ok_buttons = driver.find_elements(
-                        By.CSS_SELECTOR, already_on_team_css + " " + ok_button_css
+                    new_team_buttons[0].click()
+                    # Put the e-mail into the input box.
+                    # print("enter email")
+                    email_boxes = driver.find_elements(
+                        By.CSS_SELECTOR, new_staff_email_css
                     )
-                    ok_buttons[0].click()
-                    print(email + " is already on the team.")
+                    email_boxes[0].clear()
+                    email_boxes[0].send_keys(email)
+                    # Click "Add User"
+                    # print("click add user")
+                    add_user_buttons = driver.find_elements(
+                        By.CSS_SELECTOR, add_user_css
+                    )
+                    add_user_buttons[0].click()
+                    # If they've been successfully added, move on to the next e-mail.
+                    if userIsPresent(driver, email):
+                        success = True
+                        break
 
-                break
+                except Exception as e:
+                    print("Couldn't add " + email + ", trying again...")
+                    # print(repr(e))
+                    # Give it another shot, sometimes delaying helps.
+                    continue
 
-            except Exception as e:
-                print(repr(e))
-
-        # Keep trying up to 3 times.
-        print("Trying again...")
+        if success:
+            print("Added " + email)
+        else:
+            print("Wasn't able to add " + email)
 
     return
 
@@ -148,24 +179,27 @@ def addStaff(driver, email_list):
 def promoteStaff(driver, email_list):
     # For each address:
     for email in email_list:
-        # Find the promotion button for this user.
-        promotion_css = (
-            "li[data-email='"
-            + email.lower()
-            + "'] a.make-instructor.admin-role.add-admin-role"
-        )
 
         # Keep trying up to 3 times.
-        for x in range(0, 3):
-            print("Promoting " + email)
-            try:
-                # Click the "New Team Member" button
-                promotion_button = driver.find_elements(By.CSS_SELECTOR, promotion_css)
-                promotion_button[0].click()
-                break
-            except Exception as e:
-                print(repr(e))
-                print("Trying again...")
+        if userIsPresent(driver, email):
+            # Find the promotion button for this user.
+            promotion_css = (
+                "li[data-email='"
+                + email.lower()
+                + "'] a.make-instructor.admin-role.add-admin-role"
+            )
+            for x in range(0, 3):
+                print("Promoting " + email)
+                try:
+                    # Click the "New Team Member" button
+                    promotion_button = driver.find_elements(
+                        By.CSS_SELECTOR, promotion_css
+                    )
+                    promotion_button[0].click()
+                    break
+                except Exception as e:
+                    # print(repr(e))
+                    print("Trying again...")
 
     return
 
@@ -180,11 +214,13 @@ def removeStaff(driver, email_list):
     # For each address:
     for email in email_list:
         removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
-        keep_going = True
-        loops = 0
-        max_loops = 3
-        while keep_going:
-            print("Finding " + email)
+
+        # If this user isn't present, move on to the next one.
+        if not userIsPresent(driver, email):
+            print(email + " was already not in this course.")
+            continue
+
+        for x in range(0, 3):
             try:
                 # E-mail addresses in the data attribute are lowercased.
                 remove_button = driver.find_elements(
@@ -198,16 +234,12 @@ def removeStaff(driver, email_list):
                     By.CSS_SELECTOR, confirm_removal_css
                 )
                 confirm_button[0].click()
-                keep_going = False
+                break
 
             except Exception as e:
-                print(repr(e))
+                # print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
-                loops = loops + 1
-                if loops > max_loops:
-                    print(email + " was already not in this course.")
-                    keep_going = False
 
     return
 
@@ -221,24 +253,18 @@ def demoteStaff(driver, email_list):
             + email.lower()
             + "'] a.make-staff.admin-role.remove-admin-role"
         )
-        keep_going = True
-        loops = 0
-        max_loops = 3
 
-        while keep_going:
+        for x in range(0, 3):
             print("Demoting " + email)
             try:
                 # Click the "New Team Member" button
                 demotion_button = driver.find_elements(By.CSS_SELECTOR, demotion_css)
                 demotion_button[0].click()
-                keep_going = False
+                break
             except Exception as e:
-                print(repr(e))
+                # print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
-                loops = loops + 1
-                if loops > max_loops:
-                    keep_going = False
 
     return
 
@@ -305,7 +331,7 @@ the script is to run. Press control-C to cancel.
                     )
                 )
             except Exception as e:
-                print(repr(e))
+                # print(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
                 if "Forbidden" in driver.title:
