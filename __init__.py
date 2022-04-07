@@ -1,4 +1,4 @@
-"""hx_util package."""
+"""edx_replace_staff package."""
 
 __author__ = "Colin Fredericks"
 __email__ = "colin_fredericks"

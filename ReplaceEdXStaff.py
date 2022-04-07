@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # VPAL Multi-course Staffing Script
 
 import os
