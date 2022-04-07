@@ -1,0 +1,2 @@
+Course,URL,Add,Promote,Remove,Demote
+Name of course,https://studio.edx.org/course_team/course-v1:SCHOOLNAME+COURSENAME+COURSERUN, email_to_add@example.com add_another@example.com, promote_to_admin@example.com, remove_from_course@example.com awful_guy_we_fired@example.com, demote_admin_to_staff@example.com

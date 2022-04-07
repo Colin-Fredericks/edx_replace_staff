@@ -38,7 +38,7 @@ and which people couldn't be removed.
 # Instantiating a headless Chrome browser
 def setUpWebdriver():
     print("Setting up webdriver.")
-    os.environ["PATH"] = os.environ["PATH"] + os.pathsep + "."
+    os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
     c = Options()
     # c.add_argument("--headless")
     driver = webdriver.Chrome(options=c)
