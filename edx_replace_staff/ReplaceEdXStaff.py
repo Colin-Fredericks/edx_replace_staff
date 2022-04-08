@@ -36,12 +36,13 @@ and which people couldn't be removed.
 
 
 # Instantiating a headless Chrome browser
-def setUpWebdriver():
+def setUpWebdriver(run_headless):
     print("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
-    c = Options()
-    # c.add_argument("--headless")
-    driver = webdriver.Chrome(options=c)
+    op = Options()
+    if run_headless:
+        op.add_argument("--headless")
+    driver = webdriver.Chrome(options=op)
     driver.implicitly_wait(2)
     return driver
 
@@ -281,15 +282,20 @@ def ReplaceEdXStaff():
     num_classes_fixed = 0
     skipped_classes = []
     unfound_addresses = []
+    run_headless = True
 
     # Read in command line arguments.
     parser = argparse.ArgumentParser(usage=instructions, add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-v", "--visible", action="store_true")
     parser.add_argument("csvfile", default=None)
 
     args = parser.parse_args()
     if args.help or args.csvfile is None:
         sys.exit(instructions)
+
+    if args.visible:
+        run_headless = False
 
     if not os.path.exists(args.csvfile):
         sys.exit("Input file not found: " + args.csvfile)
@@ -306,7 +312,7 @@ the script is to run. Press control-C to cancel.
     password = getpass()
 
     # Prep the web driver and sign into edX.
-    driver = setUpWebdriver()
+    driver = setUpWebdriver(run_headless)
     signIn(driver, username, password)
 
     # Open the csv and read it to a set of dicts
