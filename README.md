@@ -47,3 +47,8 @@ On later runs you can do a simpler version:
   (edxstaff) $> deactivate
 
 Run the whole process from the top if you need to reinstall (for instance, if the script and/or its requirements change).
+
+Command-line options:
+
+* -h or --help: print the instructions and quit.
+* -v or --visible: run with a visible browser instead of a headless one.
