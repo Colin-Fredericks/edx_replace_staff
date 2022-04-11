@@ -16,6 +16,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # TODO: Better tracking of what we had to skip.
 # TODO: Handle errors on add
+# TODO: Whenever possible, check for what SHOULD be present instead of what should NOT be present.
+#       It'll speed things up.
 
 instructions = """
 to run:
@@ -54,6 +56,16 @@ def userIsPresent(driver, email):
         return True
     else:
         return False
+
+
+# TODO: Write this.
+def userIsStaff(driver, email):
+    pass
+
+
+# TODO: Write this.
+def userIsAdmin(driver, email):
+    pass
 
 
 def signIn(driver, username, password):
@@ -170,6 +182,7 @@ def addStaff(driver, email_list):
                     # Give it another shot, sometimes delaying helps.
                     continue
 
+        # TODO: Make sure this is really success - don't say "added" if we didn't.
         if success:
             print("Added " + email)
         else:
@@ -178,6 +191,9 @@ def addStaff(driver, email_list):
     return
 
 
+# TODO: Note that you have to Add first if you're adding a new Admin.
+# TODO: Needs failure message for people who aren't course team.
+# TODO: Other failure messages.
 def promoteStaff(driver, email_list):
     # For each address:
     for email in email_list:
@@ -246,6 +262,7 @@ def removeStaff(driver, email_list):
     return
 
 
+# TODO: Check to see if users are already Staff before demoting.
 def demoteStaff(driver, email_list):
     # For each address:
     for email in email_list:
@@ -301,6 +318,7 @@ def ReplaceEdXStaff():
         sys.exit("Input file not found: " + args.csvfile)
 
     # Prompt for username and password
+    # TODO: Maybe allow a file to read username and pw from.
     print(
         """
 This script requires a username and password to run.
