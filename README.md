@@ -12,10 +12,13 @@ Using this script requires a CSV file with the following headers:
 
 When you have multiple people in any of these categories, space-separate them. You can find an example in the test folder.
 
+## Chrome Web Driver
+
 This repo includes a Mac version of the [Chrome webdriver](https://chromedriver.chromium.org/), which is licensed under the a [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name).
 
-Instructions
--------------
+Since chromedriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to
+
+## Instructions
 
 To install and use for the first time:
 
@@ -48,7 +51,7 @@ On later runs you can do a simpler version:
 
 Run the whole process from the top if you need to reinstall (for instance, if the script and/or its requirements change).
 
-Command-line options:
+## Command-line options:
 
 * -h or --help: print the instructions and quit.
 * -v or --visible: run with a visible browser instead of a headless one.
