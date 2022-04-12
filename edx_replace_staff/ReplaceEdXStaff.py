@@ -76,6 +76,34 @@ def userIsAdmin(driver, email):
         return False
 
 
+# Returns info about the dialog.
+# If there was none, it's "no_dialog"
+# If we closed it and they weren't a user, it's "no_user"
+# If we couldn't close the dialog, it's "failed_to_close"
+def closeErrorDialog(driver):
+
+    # Try to find the "ok" button for the error dialogs.
+    wrong_email_css = "#prompt-error.is-shown button.action-primary"
+    wrong_email_ok_button = driver.find_elements(By.CSS_SELECTOR, wrong_email_css)
+
+    # If there is an error dialog open, report why, clear it, and move on.
+    if len(wrong_email_ok_button) > 0:
+        print("error dialog open")
+        try:
+            # No user with specified e-mail address.
+            wrong_email_ok_button[0].click()
+            return {"reason": "no_user"}
+        except Exception as e:
+            # Couldn't close the error dialog.
+            # print(repr(e))
+            print("Warning: could not close error dialog for " + driver.title)
+            return {"reason": "failed_to_close"}
+    # If there's no error dialog, we were successful. Move on.
+    else:
+        # No error dialog
+        return {"reason": "no_dialog"}
+
+
 def signIn(driver, username, password):
 
     # Locations
@@ -118,18 +146,16 @@ def signIn(driver, username, password):
 def addStaff(driver, email_list):
 
     # Locations for add-staff inputs
-    wrong_email_css = "#prompt-error.is-shown button.action-primary"
     new_team_css = "a.create-user-button"
     new_staff_email_css = "input#user-email-input"
     add_user_css = "div.actions button.action-primary"
 
     # For each address:
     for email in email_list:
-
         success = False
 
         # If the user is already present, move to the next e-mail address.
-        if userIsPresent(driver, email) > 0:
+        if userIsPresent(driver, email):
             print(email + " is already on course team.")
             continue
 
@@ -137,64 +163,48 @@ def addStaff(driver, email_list):
         for x in range(0, 3):
             print("Trying to add " + email)
 
-            # Try to find the "ok" button for the error dialogs.
-            wrong_email_ok_button = driver.find_elements(
-                By.CSS_SELECTOR, wrong_email_css
-            )
-            # If there is an error dialog open, report why, clear it, and move on.
-            if len(wrong_email_ok_button) > 0:
-                print("error dialog open")
-                try:
-                    print("No edX user with email " + email)
-                    wrong_email_ok_button[0].click()
-                    # Move to the next e-mail address.
+            try:
+                # Click the "New Team Member" button
+                # print("click new team")
+                new_team_buttons = driver.find_elements(By.CSS_SELECTOR, new_team_css)
+                new_team_buttons[0].click()
+            except Exception as e:
+                # If that failed, there could be an error message up. Try to close it.
+                closeErrorDialog(driver)
+
+            try:
+                # Put the e-mail into the input box.
+                # print("enter email")
+                email_boxes = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)
+                email_boxes[0].clear()
+                email_boxes[0].send_keys(email)
+                # Click "Add User"
+                # print("click add user")
+                add_user_buttons = driver.find_elements(By.CSS_SELECTOR, add_user_css)
+                add_user_buttons[0].click()
+
+                # Now that we've clicked the add button,
+                # Either the user was added or there's an error dialog.
+                if userIsPresent(driver, email):
+                    # All good.
                     success = True
                     break
-
-                except Exception as e:
-                    print("Couldn't click dialog, trying again...")
-                    # print(repr(e))
-                    # Give it another shot, sometimes delaying helps.
-                    continue
-
-            # If there isn't a dialog open, try to add the team member.
-            else:
-                # print("No error dialog")
-                try:
-                    # Click the "New Team Member" button
-                    # print("click new team")
-                    new_team_buttons = driver.find_elements(
-                        By.CSS_SELECTOR, new_team_css
-                    )
-                    new_team_buttons[0].click()
-                    # Put the e-mail into the input box.
-                    # print("enter email")
-                    email_boxes = driver.find_elements(
-                        By.CSS_SELECTOR, new_staff_email_css
-                    )
-                    email_boxes[0].clear()
-                    email_boxes[0].send_keys(email)
-                    # Click "Add User"
-                    # print("click add user")
-                    add_user_buttons = driver.find_elements(
-                        By.CSS_SELECTOR, add_user_css
-                    )
-                    add_user_buttons[0].click()
-                    # If they've been successfully added, move on to the next e-mail.
-                    success = True
+                else:
+                    # Clear the dialog and move on to the next e-mail.
+                    closeErrorDialog(driver)
                     break
 
-                except Exception as e:
-                    print("Couldn't add " + email + ", trying again...")
-                    # print(repr(e))
-                    # Give it another shot, sometimes delaying helps.
-                    continue
+            except Exception as e:
+                # If the stuff above failed, it's probably because
+                # one of the elements hasn't been added to the page yet.
+                print("Couldn't add " + email + ", trying again...")
+                print(repr(e))
 
-        # TODO: Make sure this is really success - don't say "added" if we didn't.
         if success:
             print("Added " + email)
         else:
             print("Could not add " + email)
+            closeErrorDialog(driver)
 
     return
 
