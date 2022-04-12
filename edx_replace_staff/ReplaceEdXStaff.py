@@ -45,7 +45,7 @@ def setUpWebdriver(run_headless):
     if run_headless:
         op.add_argument("--headless")
     driver = webdriver.Chrome(options=op)
-    driver.implicitly_wait(2)
+    driver.implicitly_wait(1)
     return driver
 
 
@@ -69,7 +69,7 @@ def userIsStaff(driver, email):
 
 def userIsAdmin(driver, email):
     admin_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-instructor"
-    admin_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
+    admin_flag = driver.find_elements(By.CSS_SELECTOR, admin_user_css)
     if len(admin_flag) > 0:
         return True
     else:
@@ -204,16 +204,17 @@ def addStaff(driver, email_list):
 # TODO: Other failure messages.
 def promoteStaff(driver, email_list):
 
-    promotion_css = (
-        "li[data-email='"
-        + email.lower()
-        + "'] a.make-instructor.admin-role.add-admin-role"
-    )
-
     # For each address:
     for email in email_list:
 
         if userIsStaff(driver, email):
+
+            promotion_css = (
+                "li[data-email='"
+                + email.lower()
+                + "'] a.make-instructor.admin-role.add-admin-role"
+            )
+
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
                 print("Promoting " + email)
@@ -242,7 +243,6 @@ def removeStaff(driver, email_list):
     # The LI has data-email equal to the user's email address.
     trash_can_css = "a.remove-user"
     confirm_removal_css = "#prompt-warning.is-shown button.action-primary"
-    removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
     # For each address:
     for email in email_list:
@@ -251,6 +251,8 @@ def removeStaff(driver, email_list):
         if not userIsPresent(driver, email):
             print(email + " was already not in this course.")
             continue
+
+        removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
         for x in range(0, 3):
             try:
@@ -278,16 +280,17 @@ def removeStaff(driver, email_list):
 
 def demoteStaff(driver, email_list):
 
-    demotion_css = (
-        "li[data-email='"
-        + email.lower()
-        + "'] a.make-staff.admin-role.remove-admin-role"
-    )
-
     # For each address:
     for email in email_list:
 
         if userIsAdmin(driver, email):
+
+            demotion_css = (
+                "li[data-email='"
+                + email.lower()
+                + "'] a.make-staff.admin-role.remove-admin-role"
+            )
+
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
                 print("Demoting " + email)
@@ -397,6 +400,10 @@ the script is to run. Press control-C to cancel.
                 "Demote": demoteStaff,
             }
             for j in jobs:
+                if each_row[j] is None:
+                    driver.quit()
+                    print("CSV error - might be missing a column.")
+                    continue
                 # Taking out whitespace.
                 # Split e-mail list on spaces and throw out blank elements.
                 email_list_with_blanks = each_row[j].split(" ")
