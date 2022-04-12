@@ -58,14 +58,22 @@ def userIsPresent(driver, email):
         return False
 
 
-# TODO: Write this.
 def userIsStaff(driver, email):
-    pass
+    staff_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-staff"
+    staff_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
+    if len(staff_flag) > 0:
+        return True
+    else:
+        return False
 
 
-# TODO: Write this.
 def userIsAdmin(driver, email):
-    pass
+    admin_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-instructor"
+    admin_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
+    if len(admin_flag) > 0:
+        return True
+    else:
+        return False
 
 
 def signIn(driver, username, password):
@@ -195,21 +203,22 @@ def addStaff(driver, email_list):
 # TODO: Needs failure message for people who aren't course team.
 # TODO: Other failure messages.
 def promoteStaff(driver, email_list):
+
+    promotion_css = (
+        "li[data-email='"
+        + email.lower()
+        + "'] a.make-instructor.admin-role.add-admin-role"
+    )
+
     # For each address:
     for email in email_list:
 
-        # Keep trying up to 3 times.
-        if userIsPresent(driver, email):
-            # Find the promotion button for this user.
-            promotion_css = (
-                "li[data-email='"
-                + email.lower()
-                + "'] a.make-instructor.admin-role.add-admin-role"
-            )
+        if userIsStaff(driver, email):
+            # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
                 print("Promoting " + email)
                 try:
-                    # Click the "New Team Member" button
+                    # Find the promotion button for this user.
                     promotion_button = driver.find_elements(
                         By.CSS_SELECTOR, promotion_css
                     )
@@ -218,6 +227,11 @@ def promoteStaff(driver, email_list):
                 except Exception as e:
                     # print(repr(e))
                     print("Trying again...")
+        else:
+            if userIsAdmin(driver, email):
+                print(email + " is already admin.")
+            else:
+                print(email + " is not in this course.")
 
     return
 
@@ -228,10 +242,10 @@ def removeStaff(driver, email_list):
     # The LI has data-email equal to the user's email address.
     trash_can_css = "a.remove-user"
     confirm_removal_css = "#prompt-warning.is-shown button.action-primary"
+    removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
     # For each address:
     for email in email_list:
-        removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
         # If this user isn't present, move on to the next one.
         if not userIsPresent(driver, email):
@@ -262,28 +276,37 @@ def removeStaff(driver, email_list):
     return
 
 
-# TODO: Check to see if users are already Staff before demoting.
 def demoteStaff(driver, email_list):
+
+    demotion_css = (
+        "li[data-email='"
+        + email.lower()
+        + "'] a.make-staff.admin-role.remove-admin-role"
+    )
+
     # For each address:
     for email in email_list:
-        # Find the demotion button for this user.
-        demotion_css = (
-            "li[data-email='"
-            + email.lower()
-            + "'] a.make-staff.admin-role.remove-admin-role"
-        )
 
-        for x in range(0, 3):
-            print("Demoting " + email)
-            try:
-                # Click the "New Team Member" button
-                demotion_button = driver.find_elements(By.CSS_SELECTOR, demotion_css)
-                demotion_button[0].click()
-                break
-            except Exception as e:
-                # print(repr(e))
-                # Keep trying up to 3 times.
-                print("Trying again...")
+        if userIsAdmin(driver, email):
+            # Keep trying up to 3 times in case we're still loading.
+            for x in range(0, 3):
+                print("Demoting " + email)
+                try:
+                    # Find the demotion button for this user.
+                    demotion_button = driver.find_elements(
+                        By.CSS_SELECTOR, demotion_css
+                    )
+                    demotion_button[0].click()
+                    break
+                except Exception as e:
+                    # print(repr(e))
+                    # Keep trying up to 3 times.
+                    print("Trying again...")
+        else:
+            if userIsStaff(driver, email):
+                print(email + " is already staff.")
+            else:
+                print(email + " is not in this course.")
 
     return
 
