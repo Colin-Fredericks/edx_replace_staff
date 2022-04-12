@@ -45,7 +45,7 @@ def setUpWebdriver(run_headless):
     if run_headless:
         op.add_argument("--headless")
     driver = webdriver.Chrome(options=op)
-    driver.implicitly_wait(1)
+    driver.implicitly_wait(2)
     return driver
 
 
@@ -134,7 +134,7 @@ def addStaff(driver, email_list):
 
         # Retry up to 3 times.
         for x in range(0, 3):
-            print("Adding " + email)
+            print("Trying to add " + email)
 
             # Try to find the "ok" button for the error dialogs.
             wrong_email_ok_button = driver.find_elements(
@@ -263,7 +263,7 @@ def removeStaff(driver, email_list):
                 # Click the trash can ("remove user" button)
                 remove_button[0].click()
                 # Click the "confirm" button.
-                print("Removing " + email)
+                print("Trying to remove " + email)
                 confirm_button = driver.find_elements(
                     By.CSS_SELECTOR, confirm_removal_css
                 )
