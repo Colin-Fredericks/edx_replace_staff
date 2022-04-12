@@ -125,6 +125,7 @@ def addStaff(driver, email_list):
 
     # For each address:
     for email in email_list:
+
         success = False
 
         # If the user is already present, move to the next e-mail address.
@@ -180,9 +181,8 @@ def addStaff(driver, email_list):
                     )
                     add_user_buttons[0].click()
                     # If they've been successfully added, move on to the next e-mail.
-                    if userIsPresent(driver, email):
-                        success = True
-                        break
+                    success = True
+                    break
 
                 except Exception as e:
                     print("Couldn't add " + email + ", trying again...")
@@ -194,7 +194,7 @@ def addStaff(driver, email_list):
         if success:
             print("Added " + email)
         else:
-            print("Wasn't able to add " + email)
+            print("Could not add " + email)
 
     return
 
@@ -252,6 +252,7 @@ def removeStaff(driver, email_list):
             print(email + " was already not in this course.")
             continue
 
+        success = False
         removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
         for x in range(0, 3):
@@ -268,12 +269,18 @@ def removeStaff(driver, email_list):
                     By.CSS_SELECTOR, confirm_removal_css
                 )
                 confirm_button[0].click()
+                success = True
                 break
 
             except Exception as e:
                 # print(repr(e))
                 # Keep trying up to 3 times.
                 print("Trying again...")
+
+        if success:
+            print("Removed " + email)
+        else:
+            print("Could not remove " + email)
 
     return
 
@@ -391,7 +398,7 @@ the script is to run. Press control-C to cancel.
                     print("Course Team page load timed out.")
                 continue
 
-            print(driver.title)
+            print("\n" + driver.title)
             # Functions to call for each task. As of Python 3.6 they'll stay in this order.
             jobs = {
                 "Add": addStaff,
