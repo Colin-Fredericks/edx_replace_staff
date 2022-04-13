@@ -343,6 +343,8 @@ def ReplaceEdXStaff():
     skipped_classes = []
     unfound_addresses = []
     run_headless = True
+    timeouts = 0
+    too_many_timeouts = 3
 
     # Read in command line arguments.
     parser = argparse.ArgumentParser(usage=instructions, add_help=False)
@@ -398,14 +400,28 @@ the script is to run. Press control-C to cancel.
                         (By.CSS_SELECTOR, "input#user-email-input")
                     )
                 )
+                timeouts = 0
             except Exception as e:
                 # print(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
-                if "Forbidden" in driver.title:
-                    print("Could not open course " + each_row["URL"])
-                if "Dashboard" in driver.title:
-                    print("Course Team page load timed out.")
+                continue
+
+            if "Dashboard" in driver.title:
+                print("Course Team page load timed out.")
+                skipped_classes.append(each_row)
+                timeouts += 1
+                if timeouts >= too_many_timeouts:
+                    print(str(too_many_timeouts) + " course pages timed out in a row.")
+                    print("Check URLs and internet connectivity and try again.")
+                    break
+                continue
+            if (
+                "Course Team Settings" not in driver.title
+                or "Forbidden" in driver.title
+            ):
+                print("Could not open course " + each_row["URL"])
+                skipped_classes.append(each_row)
                 continue
 
             print("\n" + driver.title)
