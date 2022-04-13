@@ -15,9 +15,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # TODO: Better tracking of what we had to skip.
-# TODO: Handle errors on add
-# TODO: Whenever possible, check for what SHOULD be present instead of what should NOT be present.
-#       It'll speed things up.
 
 instructions = """
 to run:
@@ -209,9 +206,6 @@ def addStaff(driver, email_list):
     return
 
 
-# TODO: Note that you have to Add first if you're adding a new Admin.
-# TODO: Needs failure message for people who aren't course team.
-# TODO: Other failure messages.
 def promoteStaff(driver, email_list):
 
     # For each address:
@@ -219,6 +213,7 @@ def promoteStaff(driver, email_list):
 
         if userIsStaff(driver, email):
 
+            success = False
             promotion_css = (
                 "li[data-email='"
                 + email.lower()
@@ -233,16 +228,28 @@ def promoteStaff(driver, email_list):
                     promotion_button = driver.find_elements(
                         By.CSS_SELECTOR, promotion_css
                     )
+                except:
+                    print(
+                        "No promotion button found. You may not have Admin access. Trying again..."
+                    )
+                    continue
+                try:
                     promotion_button[0].click()
+                    success = True
                     break
                 except Exception as e:
                     # print(repr(e))
-                    print("Trying again...")
+                    print("Couldn't click promotion button. Trying again...")
         else:
             if userIsAdmin(driver, email):
                 print(email + " is already admin.")
             else:
-                print(email + " is not in this course.")
+                print(email + " is not in this course. Add them before promoting them.")
+
+        if success:
+            print("Promoted " + email + " to Admin.")
+        else:
+            print("Could not promote " + email)
 
     return
 
@@ -302,6 +309,7 @@ def demoteStaff(driver, email_list):
 
         if userIsAdmin(driver, email):
 
+            success = False
             demotion_css = (
                 "li[data-email='"
                 + email.lower()
@@ -316,17 +324,28 @@ def demoteStaff(driver, email_list):
                     demotion_button = driver.find_elements(
                         By.CSS_SELECTOR, demotion_css
                     )
+                except:
+                    print(
+                        "Couldn't find demotion button. You may not have Admin access. Trying again..."
+                    )
+                    continue
+                try:
                     demotion_button[0].click()
+                    success = True
                     break
                 except Exception as e:
                     # print(repr(e))
-                    # Keep trying up to 3 times.
-                    print("Trying again...")
+                    print("Couldn't click demotion button. Trying again...")
         else:
             if userIsStaff(driver, email):
                 print(email + " is already staff.")
             else:
                 print(email + " is not in this course.")
+
+        if success:
+            print("Demoted " + email + " to staff.")
+        else:
+            print("Could not demote " + email)
 
     return
 
