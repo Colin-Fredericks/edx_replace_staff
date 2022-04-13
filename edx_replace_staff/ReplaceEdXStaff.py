@@ -195,7 +195,7 @@ def addStaff(driver, email_list):
                 # If the stuff above failed, it's probably because
                 # one of the elements hasn't been added to the page yet.
                 print("Couldn't add " + email + ", trying again...")
-                print(repr(e))
+                # print(repr(e))
 
         if success:
             print("Added " + email)
@@ -211,14 +211,14 @@ def promoteStaff(driver, email_list):
     # For each address:
     for email in email_list:
 
-        if userIsStaff(driver, email):
+        success = False
+        promotion_css = (
+            "li[data-email='"
+            + email.lower()
+            + "'] a.make-instructor.admin-role.add-admin-role"
+        )
 
-            success = False
-            promotion_css = (
-                "li[data-email='"
-                + email.lower()
-                + "'] a.make-instructor.admin-role.add-admin-role"
-            )
+        if userIsStaff(driver, email):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
@@ -307,14 +307,14 @@ def demoteStaff(driver, email_list):
     # For each address:
     for email in email_list:
 
-        if userIsAdmin(driver, email):
+        success = False
+        demotion_css = (
+            "li[data-email='"
+            + email.lower()
+            + "'] a.make-staff.admin-role.remove-admin-role"
+        )
 
-            success = False
-            demotion_css = (
-                "li[data-email='"
-                + email.lower()
-                + "'] a.make-staff.admin-role.remove-admin-role"
-            )
+        if userIsAdmin(driver, email):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
