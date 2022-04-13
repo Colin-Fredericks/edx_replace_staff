@@ -5,6 +5,7 @@ import os
 import csv
 import sys
 import time
+import datetime
 import argparse
 from getpass import getpass
 from selenium import webdriver
@@ -393,6 +394,8 @@ the script is to run. Press control-C to cancel.
     username = input("Username: ")
     password = getpass()
 
+    start_time = datetime.datetime.now()
+
     # Prep the web driver and sign into edX.
     driver = setUpWebdriver(run_headless)
     signIn(driver, username, password)
@@ -424,11 +427,6 @@ the script is to run. Press control-C to cancel.
                 # print(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
-                if (
-                    "Course Team Settings" not in driver.title
-                    or "Forbidden" in driver.title
-                ):
-                    print("Could not open course " + each_row["URL"])
                 if "Dashboard" in driver.title:
                     print("Course Team page load timed out for " + each_row["URL"])
                     skipped_classes.append(each_row)
@@ -439,6 +437,14 @@ the script is to run. Press control-C to cancel.
                         )
                         print("Check URLs and internet connectivity and try again.")
                         break
+                continue
+
+            if (
+                "Course Team Settings" not in driver.title
+                or "Forbidden" in driver.title
+            ):
+                print("\nCould not open course " + each_row["URL"])
+                skipped_classes.append(each_row)
                 continue
 
             print("\n" + driver.title)
@@ -459,13 +465,17 @@ the script is to run. Press control-C to cancel.
                 email_list_with_blanks = each_row[j].split(" ")
                 email_list = [x for x in email_list_with_blanks if x != ""]
                 if len(each_row[j]) > 0:
-                    jobs[j](driver, email_list)
+                    it_worked = jobs[j](driver, email_list)
                     # You have to wait because I don't even know why.
                     # Otherwise it skips lines - sometimes up to half of them.
                     time.sleep(2)
 
+        # Done with the webdriver.
+        driver.quit()
+
         # Write out a new csv with the ones we couldn't do.
         if len(skipped_classes) > 0:
+            print("See remaining_courses.csv for courses that had to be skipped.")
             with open("remaining_courses.csv", "w", newline="") as remaining_courses:
                 fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
                 writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
@@ -473,11 +483,12 @@ the script is to run. Press control-C to cancel.
                 writer.writeheader()
                 for x in skipped_classes:
                     writer.writerow(x)
-        else:
-            print("Total: " + str(num_classes) + " courses.")
+
+        print("Processed " + str(num_classes - len(skipped_classes)) + " courses")
+        end_time = datetime.datetime.now()
+        print("in " + str((end_time - start_time).seconds) + " seconds.")
 
     # Done.
-    driver.quit()
 
 
 if __name__ == "__main__":
