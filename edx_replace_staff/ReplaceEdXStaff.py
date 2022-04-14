@@ -444,7 +444,7 @@ the script is to run. Press control-C to cancel.
 
             # Check to make sure we have the ability to change user status.
             if not userIsAdmin(driver, username):
-                print("User is not admin in " + each_row["URL"])
+                print("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
 
