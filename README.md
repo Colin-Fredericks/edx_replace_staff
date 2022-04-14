@@ -2,7 +2,7 @@
 
 Adds and/or removes staff in multiple edX courses at once.
 
-Using this script requires a CSV file with the following headers:
+Using this script requires a CSV file with the following headers. You can find an example csv file in the `test` folder.
 
 * **URL** - the address of class' Course Team Settings page.
 * **Add** - the e-mail addresses of the staff to be added.

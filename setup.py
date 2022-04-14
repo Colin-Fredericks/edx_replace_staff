@@ -71,7 +71,7 @@ setup(
     zip_safe=False,
     keywords="hx edx staff " + project_name,
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
