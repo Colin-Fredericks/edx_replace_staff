@@ -391,7 +391,7 @@ This user must have Admin status on all courses in which
 the script is to run. Press control-C to cancel.
 """
     )
-    username = input("Username: ")
+    username = input("User e-mail address: ")
     password = getpass()
 
     start_time = datetime.datetime.now()
@@ -409,9 +409,12 @@ the script is to run. Press control-C to cancel.
         for each_row in reader:
             # print("Processing line:")
             # print(each_row)
-            num_classes += 1
 
-            # Open the URL.
+            # Open the URL. Skip lines without one.
+            if each_row["URL"] == "":
+                continue
+
+            num_classes += 1
             driver.get(each_row["URL"].strip())
 
             # Check to make sure we've opened a new page.
@@ -439,6 +442,12 @@ the script is to run. Press control-C to cancel.
                         break
                 continue
 
+            # Check to make sure we have the ability to change user status.
+            if not userIsAdmin(driver, username):
+                print("User is not admin in " + each_row["URL"])
+                skipped_classes.append(each_row)
+                continue
+
             if (
                 "Course Team Settings" not in driver.title
                 or "Forbidden" in driver.title
@@ -448,6 +457,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             print("\n" + driver.title)
+            print(each_row["URL"])
             # Functions to call for each task. As of Python 3.6 they'll stay in this order.
             jobs = {
                 "Add": addStaff,
@@ -465,7 +475,7 @@ the script is to run. Press control-C to cancel.
                 email_list_with_blanks = each_row[j].split(" ")
                 email_list = [x for x in email_list_with_blanks if x != ""]
                 if len(each_row[j]) > 0:
-                    it_worked = jobs[j](driver, email_list)
+                    jobs[j](driver, email_list)
                     # You have to wait because I don't even know why.
                     # Otherwise it skips lines - sometimes up to half of them.
                     time.sleep(2)
@@ -486,7 +496,7 @@ the script is to run. Press control-C to cancel.
 
         print("Processed " + str(num_classes - len(skipped_classes)) + " courses")
         end_time = datetime.datetime.now()
-        print("in " + str((end_time - start_time).seconds) + " seconds.")
+        print("in " + str(end_time - start_time).split(".")[0])
 
     # Done.
 
