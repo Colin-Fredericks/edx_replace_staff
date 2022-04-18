@@ -35,19 +35,30 @@ The output is another CSV file that shows which courses couldn't be accessed
 and which people couldn't be removed.
 """
 
+# Prep the logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler("edx_staffing.log")
+formatter = logging.Formatter(
+    "%(asctime)s : %(name)s  : %(funcName)s : %(levelname)s : %(message)s"
+)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
 # Just a faster thing to type and read.
 def log(text, level="INFO"):
     print(text)
     if level == "DEBUG":
-        logging.debug(text)
+        logger.debug(text)
     if level == "INFO":
-        logging.info(text)
+        logger.info(text)
     if level == "WARNING":
-        logging.warning(text)
+        logger.warning(text)
     if level == "ERROR":
-        logging.error(text)
+        logger.error(text)
     if level == "CRITICAL":
-        logging.critical(text)
+        logger.critical(text)
 
 
 # Instantiating a headless Chrome browser
@@ -413,11 +424,6 @@ the script is to run. Press control-C to cancel.
     # Prep the web driver and sign into edX.
     driver = setUpWebdriver(run_headless)
     signIn(driver, username, password)
-
-    # Prep the logger
-    logging.basicConfig(
-        filename="edX_staffing.log", encoding="utf-8", level=logging.DEBUG
-    )
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
