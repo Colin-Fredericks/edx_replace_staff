@@ -5,6 +5,7 @@ import os
 import csv
 import sys
 import time
+import logging
 import datetime
 import argparse
 from getpass import getpass
@@ -34,10 +35,24 @@ The output is another CSV file that shows which courses couldn't be accessed
 and which people couldn't be removed.
 """
 
+# Just a faster thing to type and read.
+def log(text, level="INFO"):
+    print(text)
+    if level == "DEBUG":
+        logging.debug(text)
+    if level == "INFO":
+        logging.info(text)
+    if level == "WARNING":
+        logging.warning(text)
+    if level == "ERROR":
+        logging.error(text)
+    if level == "CRITICAL":
+        logging.critical(text)
+
 
 # Instantiating a headless Chrome browser
 def setUpWebdriver(run_headless):
-    print("Setting up webdriver.")
+    log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
     op = Options()
     if run_headless:
@@ -86,15 +101,15 @@ def closeErrorDialog(driver):
 
     # If there is an error dialog open, report why, clear it, and move on.
     if len(wrong_email_ok_button) > 0:
-        print("error dialog open")
+        log("error dialog open")
         try:
             # No user with specified e-mail address.
             wrong_email_ok_button[0].click()
             return {"reason": "no_user"}
         except Exception as e:
             # Couldn't close the error dialog.
-            # print(repr(e))
-            print("Warning: could not close error dialog for " + driver.title)
+            # log(repr(e), "DEBUG")
+            log("Could not close error dialog for " + driver.title, "WARNING")
             return {"reason": "failed_to_close"}
     # If there's no error dialog, we were successful. Move on.
     else:
@@ -111,7 +126,7 @@ def signIn(driver, username, password):
     login_button_css = ".login-button-width"
 
     # Open the edX sign-in page
-    print("Logging in...")
+    log("Logging in...")
     driver.get(login_page)
 
     # Sign in
@@ -137,7 +152,7 @@ def signIn(driver, username, password):
             sys.exit("Took too long to log in.")
         sys.exit("Could not log into edX or course dashboard page timed out.")
 
-    print("Logged in.")
+    log("Logged in.")
     return
 
 
@@ -154,16 +169,15 @@ def addStaff(driver, email_list):
 
         # If the user is already present, move to the next e-mail address.
         if userIsPresent(driver, email):
-            print(email + " is already on course team.")
+            log(email + " is already on course team.")
             continue
 
         # Retry up to 3 times.
         for x in range(0, 3):
-            print("Trying to add " + email)
+            log("Trying to add " + email)
 
             try:
                 # Click the "New Team Member" button
-                # print("click new team")
                 new_team_buttons = driver.find_elements(By.CSS_SELECTOR, new_team_css)
                 new_team_buttons[0].click()
             except Exception as e:
@@ -172,12 +186,10 @@ def addStaff(driver, email_list):
 
             try:
                 # Put the e-mail into the input box.
-                # print("enter email")
                 email_boxes = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)
                 email_boxes[0].clear()
                 email_boxes[0].send_keys(email)
                 # Click "Add User"
-                # print("click add user")
                 add_user_buttons = driver.find_elements(By.CSS_SELECTOR, add_user_css)
                 add_user_buttons[0].click()
 
@@ -195,13 +207,13 @@ def addStaff(driver, email_list):
             except Exception as e:
                 # If the stuff above failed, it's probably because
                 # one of the elements hasn't been added to the page yet.
-                print("Couldn't add " + email + ", trying again...")
-                # print(repr(e))
+                log("Couldn't add " + email + ", trying again...")
+                # log(repr(e), "DEBUG")
 
         if success:
-            print("Added " + email)
+            log("Added " + email)
         else:
-            print("Could not add " + email)
+            log("Could not add " + email)
             closeErrorDialog(driver)
 
     return
@@ -223,15 +235,16 @@ def promoteStaff(driver, email_list):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                print("Promoting " + email)
+                log("Promoting " + email)
                 try:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(
                         By.CSS_SELECTOR, promotion_css
                     )
                 except:
-                    print(
-                        "No promotion button found. You may not have Admin access. Trying again..."
+                    log(
+                        "No promotion button found. You may not have Admin access. Trying again...",
+                        "WARNING",
                     )
                     continue
                 try:
@@ -239,18 +252,18 @@ def promoteStaff(driver, email_list):
                     success = True
                     break
                 except Exception as e:
-                    # print(repr(e))
-                    print("Couldn't click promotion button. Trying again...")
+                    # log(repr(e), "DEBUG")
+                    log("Couldn't click promotion button. Trying again...")
         else:
             if userIsAdmin(driver, email):
-                print(email + " is already admin.")
+                log(email + " is already admin.")
             else:
-                print(email + " is not in this course. Add them before promoting them.")
+                log(email + " is not in this course. Add them before promoting them.")
 
         if success:
-            print("Promoted " + email + " to Admin.")
+            log("Promoted " + email + " to Admin.")
         else:
-            print("Could not promote " + email)
+            log("Could not promote " + email)
 
     return
 
@@ -267,7 +280,7 @@ def removeStaff(driver, email_list):
 
         # If this user isn't present, move on to the next one.
         if not userIsPresent(driver, email):
-            print(email + " was already not in this course.")
+            log(email + " was already not in this course.")
             continue
 
         success = False
@@ -282,7 +295,7 @@ def removeStaff(driver, email_list):
                 # Click the trash can ("remove user" button)
                 remove_button[0].click()
                 # Click the "confirm" button.
-                print("Trying to remove " + email)
+                log("Trying to remove " + email)
                 confirm_button = driver.find_elements(
                     By.CSS_SELECTOR, confirm_removal_css
                 )
@@ -291,14 +304,14 @@ def removeStaff(driver, email_list):
                 break
 
             except Exception as e:
-                # print(repr(e))
+                # log(repr(e), "DEBUG")
                 # Keep trying up to 3 times.
-                print("Trying again...")
+                log("Trying again...")
 
         if success:
-            print("Removed " + email)
+            log("Removed " + email)
         else:
-            print("Could not remove " + email)
+            log("Could not remove " + email)
 
     return
 
@@ -319,15 +332,16 @@ def demoteStaff(driver, email_list):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                print("Demoting " + email)
+                log("Demoting " + email)
                 try:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(
                         By.CSS_SELECTOR, demotion_css
                     )
                 except:
-                    print(
-                        "Couldn't find demotion button. You may not have Admin access. Trying again..."
+                    log(
+                        "Couldn't find demotion button. You may not have Admin access. Trying again...",
+                        "WARNING",
                     )
                     continue
                 try:
@@ -335,18 +349,18 @@ def demoteStaff(driver, email_list):
                     success = True
                     break
                 except Exception as e:
-                    # print(repr(e))
-                    print("Couldn't click demotion button. Trying again...")
+                    # log(repr(e), "DEBUG")
+                    log("Couldn't click demotion button. Trying again...")
         else:
             if userIsStaff(driver, email):
-                print(email + " is already staff.")
+                log(email + " is already staff.")
             else:
-                print(email + " is not in this course.")
+                log(email + " is not in this course.")
 
         if success:
-            print("Demoted " + email + " to staff.")
+            log("Demoted " + email + " to staff.")
         else:
-            print("Could not demote " + email)
+            log("Could not demote " + email)
 
     return
 
@@ -400,15 +414,20 @@ the script is to run. Press control-C to cancel.
     driver = setUpWebdriver(run_headless)
     signIn(driver, username, password)
 
+    # Prep the logger
+    logging.basicConfig(
+        filename="edX_staffing.log", encoding="utf-8", level=logging.DEBUG
+    )
+
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
-        print("Opening csv file.")
+        log("Opening csv file.")
         reader = csv.DictReader(file)
 
         # For each line in the CSV...
         for each_row in reader:
-            # print("Processing line:")
-            # print(each_row)
+            # log("Processing line:", "DEBUG")
+            # log(each_row, "DEBUG")
 
             # Open the URL. Skip lines without one.
             if each_row["URL"] == "":
@@ -427,24 +446,29 @@ the script is to run. Press control-C to cancel.
                 )
                 timeouts = 0
             except Exception as e:
-                # print(repr(e))
+                # log(repr(e), "DEBUG")
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
                 if "Dashboard" in driver.title:
-                    print("Course Team page load timed out for " + each_row["URL"])
+                    log("Course Team page load timed out for " + each_row["URL"])
                     skipped_classes.append(each_row)
                     timeouts += 1
                     if timeouts >= too_many_timeouts:
-                        print(
-                            str(too_many_timeouts) + " course pages timed out in a row."
+                        log(
+                            str(too_many_timeouts)
+                            + " course pages timed out in a row.",
+                            "WARNING",
                         )
-                        print("Check URLs and internet connectivity and try again.")
+                        log(
+                            "Check URLs and internet connectivity and try again.",
+                            "WARNING",
+                        )
                         break
                 continue
 
             # Check to make sure we have the ability to change user status.
             if not userIsAdmin(driver, username):
-                print("\nUser is not admin in " + each_row["URL"])
+                log("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
 
@@ -452,12 +476,12 @@ the script is to run. Press control-C to cancel.
                 "Course Team Settings" not in driver.title
                 or "Forbidden" in driver.title
             ):
-                print("\nCould not open course " + each_row["URL"])
+                log("\nCould not open course " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
 
-            print("\n" + driver.title)
-            print(each_row["URL"])
+            log("\n" + driver.title)
+            log(each_row["URL"])
             # Functions to call for each task. As of Python 3.6 they'll stay in this order.
             jobs = {
                 "Add": addStaff,
@@ -468,7 +492,7 @@ the script is to run. Press control-C to cancel.
             for j in jobs:
                 if each_row[j] is None:
                     driver.quit()
-                    print("CSV error - might be missing a column.")
+                    log("CSV error - might be missing a column.", "CRITICAL")
                     continue
                 # Taking out whitespace.
                 # Split e-mail list on spaces and throw out blank elements.
@@ -485,7 +509,7 @@ the script is to run. Press control-C to cancel.
 
         # Write out a new csv with the ones we couldn't do.
         if len(skipped_classes) > 0:
-            print("See remaining_courses.csv for courses that had to be skipped.")
+            log("See remaining_courses.csv for courses that had to be skipped.")
             with open("remaining_courses.csv", "w", newline="") as remaining_courses:
                 fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
                 writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
@@ -494,9 +518,9 @@ the script is to run. Press control-C to cancel.
                 for x in skipped_classes:
                     writer.writerow(x)
 
-        print("Processed " + str(num_classes - len(skipped_classes)) + " courses")
+        log("Processed " + str(num_classes - len(skipped_classes)) + " courses")
         end_time = datetime.datetime.now()
-        print("in " + str(end_time - start_time).split(".")[0])
+        log("in " + str(end_time - start_time).split(".")[0])
 
     # Done.
 
