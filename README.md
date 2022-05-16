@@ -1,6 +1,7 @@
 # edx_replace_staff
 
-Adds and/or removes staff in multiple edX courses at once.
+Adds and/or removes staff in multiple edX courses at once. Can also be run with the
+--list option to only create a list of who's staff where rather than making changes.
 
 Using this script requires a CSV file with the following headers. You can find an example csv file in the `test` folder.
 
@@ -54,4 +55,5 @@ Run the whole process from the top if you need to reinstall (for instance, if th
 ## Command-line options:
 
 * -h or --help: print the instructions and quit.
+* -l or --list: list staff in each course, make no changes.
 * -v or --visible: run with a visible browser instead of a headless one.

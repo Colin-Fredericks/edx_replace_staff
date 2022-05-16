@@ -32,7 +32,15 @@ Remove - just like "Add"
 Demote - removes Admin status
 
 The output is another CSV file that shows which courses couldn't be accessed
-and which people couldn't be removed.
+and which people couldn't be removed. If the --list option is used,
+the CSV instead shows who's admin and staff in all courses.
+
+Options:
+  -h or --help:    Print this message and exit.
+  -l or --list:    List all staff and admin in all courses. Make no changes.
+                   Only requires the URL column.
+  -v or --visible: Run the browser in normal mode instead of headless.
+
 """
 
 # Prep the logger
@@ -98,6 +106,13 @@ def userIsAdmin(driver, email):
         return True
     else:
         return False
+
+
+def getAllUsers(driver):
+    staff_list = []
+    admin_list = []
+
+    return {"staff": staff_list, "admin": admin_list}
 
 
 # Returns info about the dialog.
@@ -394,6 +409,7 @@ def ReplaceEdXStaff():
     # Read in command line arguments.
     parser = argparse.ArgumentParser(usage=instructions, add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-l", "--list", action="store_true")
     parser.add_argument("-v", "--visible", action="store_true")
     parser.add_argument("csvfile", default=None)
 
@@ -427,6 +443,10 @@ the script is to run. Press control-C to cancel.
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
+
+        # Make a list of users so we can output it later if we're in --list mode.
+        staff_list = []
+
         log("Opening csv file.")
         reader = csv.DictReader(file)
 
@@ -471,6 +491,10 @@ the script is to run. Press control-C to cancel.
                         )
                         break
                 continue
+
+            # If we only need to get users and status, we can do that easier.
+            if args.list:
+                staff_list.append(getAllUsers(driver))
 
             # Check to make sure we have the ability to change user status.
             if not userIsAdmin(driver, username):
