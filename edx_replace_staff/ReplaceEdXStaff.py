@@ -112,6 +112,16 @@ def getAllUsers(driver):
     staff_list = []
     admin_list = []
 
+    staff_xpath = "//span[contains(@class, 'flag-role-staff')]/ancestor::li"
+    admin_xpath = "//span[contains(@class, 'flag-role-instructor')]/ancestor::li"
+
+    all_staff = driver.find_elements(By.XPATH, staff_xpath)
+    for x in all_staff:
+        staff_list.append(x.get_attribute("data-email"))
+    all_admins = driver.find_elements(By.XPATH, admin_xpath)
+    for y in all_admins:
+        admin_list.append(y.get_attribute("data-email"))
+
     return {"staff": staff_list, "admin": admin_list}
 
 
@@ -401,6 +411,7 @@ def ReplaceEdXStaff():
     num_classes = 0
     num_classes_fixed = 0
     skipped_classes = []
+    staffed_classes = []
     unfound_addresses = []
     run_headless = True
     timeouts = 0
@@ -443,9 +454,6 @@ the script is to run. Press control-C to cancel.
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
-
-        # Make a list of users so we can output it later if we're in --list mode.
-        staff_list = []
 
         log("Opening csv file.")
         reader = csv.DictReader(file)
@@ -494,7 +502,17 @@ the script is to run. Press control-C to cancel.
 
             # If we only need to get users and status, we can do that easier.
             if args.list:
-                staff_list.append(getAllUsers(driver))
+                log("Getting staff for " + each_row["URL"])
+                user_list = getAllUsers(driver)
+                # log(user_list)
+                this_class = {
+                    "Course": each_row["Course"],
+                    "URL": each_row["URL"],
+                    "Admin": " ".join(user_list["admin"]),
+                    "Staff": " ".join(user_list["staff"]),
+                }
+                staffed_classes.append(this_class)
+                continue
 
             # Check to make sure we have the ability to change user status.
             if not userIsAdmin(driver, username):
@@ -537,16 +555,31 @@ the script is to run. Press control-C to cancel.
         # Done with the webdriver.
         driver.quit()
 
-        # Write out a new csv with the ones we couldn't do.
-        if len(skipped_classes) > 0:
-            log("See remaining_courses.csv for courses that had to be skipped.")
-            with open("remaining_courses.csv", "w", newline="") as remaining_courses:
-                fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
-                writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
+        # In list mode, save a CSV with our course staff.
+        if args.list:
+            log(
+                "See course_staffing.csv for a full list of course staff and administrators."
+            )
+            with open("course_staffing.csv", "w", newline="") as all_staff:
+                fieldnames = ["Course", "URL", "Admin", "Staff"]
+                writer = csv.DictWriter(all_staff, fieldnames=fieldnames)
 
                 writer.writeheader()
-                for x in skipped_classes:
+                for x in staffed_classes:
                     writer.writerow(x)
+        # Write out a new csv with the ones we couldn't do.
+        else:
+            if len(skipped_classes) > 0:
+                log("See remaining_courses.csv for courses that had to be skipped.")
+                with open(
+                    "remaining_courses.csv", "w", newline=""
+                ) as remaining_courses:
+                    fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
+                    writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
+
+                    writer.writeheader()
+                    for x in skipped_classes:
+                        writer.writerow(x)
 
         log("Processed " + str(num_classes - len(skipped_classes)) + " courses")
         end_time = datetime.datetime.now()

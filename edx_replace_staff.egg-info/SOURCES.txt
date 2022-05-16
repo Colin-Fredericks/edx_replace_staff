@@ -1,0 +1,13 @@
+README.md
+setup.cfg
+setup.py
+edx_replace_staff/ReplaceEdXStaff.py
+edx_replace_staff/__init__.py
+edx_replace_staff/chromedriver
+edx_replace_staff.egg-info/PKG-INFO
+edx_replace_staff.egg-info/SOURCES.txt
+edx_replace_staff.egg-info/dependency_links.txt
+edx_replace_staff.egg-info/entry_points.txt
+edx_replace_staff.egg-info/not-zip-safe
+edx_replace_staff.egg-info/requires.txt
+edx_replace_staff.egg-info/top_level.txt
