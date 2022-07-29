@@ -68,6 +68,23 @@ def log(text, level="INFO"):
     if level == "CRITICAL":
         logger.critical(text)
 
+def trimLog(log_file="edx_staffing.log", max_lines=20000):
+    """
+    Trims a log file to a maximum number of lines.
+
+    Parameters:
+    log_file (str): The file to trim.
+    max_lines (int): The maximum number of lines to keep.
+
+    Returns:
+    void
+
+    """
+
+    with open(log_file, "r") as f:
+        lines = f.readlines()
+    with open(log_file, "w") as f:
+        f.writelines(lines[-max_lines:])
 
 # Instantiating a headless Chrome browser
 def setUpWebdriver(run_headless):
@@ -407,6 +424,8 @@ def demoteStaff(driver, email_list):
 
 
 def ReplaceEdXStaff():
+
+    trimLog()
 
     num_classes = 0
     num_classes_fixed = 0
