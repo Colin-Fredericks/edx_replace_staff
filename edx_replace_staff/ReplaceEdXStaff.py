@@ -8,12 +8,14 @@ import time
 import logging
 import datetime
 import argparse
+import traceback
 from getpass import getpass
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.support import expected_conditions as EC
 
 # TODO: Better tracking of what we had to skip.
@@ -68,6 +70,7 @@ def log(text, level="INFO"):
     if level == "CRITICAL":
         logger.critical(text)
 
+
 def trimLog(log_file="edx_staffing.log", max_lines=20000):
     """
     Trims a log file to a maximum number of lines.
@@ -85,6 +88,7 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
         lines = f.readlines()
     with open(log_file, "w") as f:
         f.writelines(lines[-max_lines:])
+
 
 # Instantiating a headless Chrome browser
 def setUpWebdriver(run_headless):
@@ -194,16 +198,21 @@ def signIn(driver, username, password):
 
     # Check to make sure we're signed in
     try:
-        found_dashboard = WebDriverWait(driver, 10).until(
+        found_dashboard = WebDriverWait(driver, 15).until(
             EC.title_contains("Dashboard")
         )
-    except:
-        driver.close()
+    except (
+        selenium_exceptions.TimeoutException,
+        selenium_exceptions.InvalidSessionIdException,
+    ):
+        log(traceback.print_exc(), "WARNING")
+        login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
+        if len(login_fail) > 0:
+            log("Incorrect login or password")
         if "Forbidden" in driver.title:
-            sys.exit("403: Forbidden")
-        if "Login" in driver.title:
-            sys.exit("Took too long to log in.")
-        sys.exit("Could not log into edX or course dashboard page timed out.")
+            log("403: Forbidden")
+        driver.close()
+        sys.exit("Login issue or course dashboard page timed out.")
 
     log("Logged in.")
     return
