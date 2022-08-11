@@ -196,7 +196,8 @@ def signIn(driver, username, password):
     login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
     login_button.click()
 
-    # Check to make sure we're signed in
+    # Check to make sure we're signed in.
+    # There are several possible fail states to check for.
     try:
         found_dashboard = WebDriverWait(driver, 15).until(
             EC.title_contains("Dashboard")
@@ -209,6 +210,9 @@ def signIn(driver, username, password):
         login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
         if len(login_fail) > 0:
             log("Incorrect login or password")
+        need_reset = driver.find_elements(By.CSS_SELECTOR, "#password-security-reset-password")
+        if len(need_reset) > 0:
+            log("Password reset required")
         if "Forbidden" in driver.title:
             log("403: Forbidden")
         driver.close()
