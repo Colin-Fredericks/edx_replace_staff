@@ -6,3 +6,4 @@ test/test_promote.csv
 test/test_remove.csv
 edx_staffing.log
 build/
+.DS_Store
