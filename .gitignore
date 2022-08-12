@@ -7,3 +7,4 @@ test/test_remove.csv
 edx_staffing.log
 build/
 .DS_Store
+remaining_courses.csv
