@@ -607,7 +607,11 @@ the script is to run. Press control-C to cancel.
                     "remaining_courses.csv", "w", newline=""
                 ) as remaining_courses:
                     fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
-                    writer = csv.DictWriter(remaining_courses, fieldnames=fieldnames)
+                    writer = csv.DictWriter(
+                        remaining_courses, 
+                        fieldnames=fieldnames,
+                        extrasaction="ignore"
+                        )
 
                     writer.writeheader()
                     for x in skipped_classes:
