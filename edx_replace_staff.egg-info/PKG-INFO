@@ -1,4 +1,4 @@
-Metadata-Version: 1.1
+Metadata-Version: 2.1
 Name: edx-replace-staff
 Version: 1.1.0
 Summary: adds and/or removes staff in edX courses
@@ -6,66 +6,6 @@ Home-page: https://github.com/Colin_Fredericks/edx_replace_staff
 Author: Colin Fredericks
 Author-email: colin_fredericks@harvard.edu
 License: UNKNOWN
-Description: # edx_replace_staff
-        
-        Adds and/or removes staff in multiple edX courses at once. Can also be run with the
-        --list option to only create a list of who's staff where rather than making changes.
-        
-        Using this script requires a CSV file with the following headers. You can find an example csv file in the `test` folder.
-        
-        * **URL** - the address of class' Course Team Settings page.
-        * **Add** - the e-mail addresses of the staff to be added.
-        * **Promote** - promotes an existing staff member to Admin.
-        * **Remove** - removes staff from the course, regardless of whether they're currently Admin or not.
-        * **Demote** - removes Admin status, but leaves the user as staff.
-        
-        When you have multiple people in any of these categories, space-separate them. You can find an example in the test folder.
-        
-        ## Chrome Web Driver
-        
-        This repo includes a Mac version of the [Chrome webdriver](https://chromedriver.chromium.org/), which is licensed under the a [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name).
-        
-        Since chromedriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to
-        
-        ## Instructions
-        
-        To install and use for the first time:
-        
-            # clone this repo
-            $> git clone https://github.com/Colin-Fredericks/edx_replace_staff.git
-        
-            # create a virtualenv and activate it
-            $> python3 -m venv edxstaff
-            $> source edxstaff/bin/activate
-            (edxstaff) $>
-        
-            # install requirements
-            (edxstaff) $> cd hx_util
-            (edxstaff) $> pip3 install -r requirements.txt
-        
-            # install hx_util
-            (edxstaff) $> pip3 install .
-        
-            # to add or remove staff
-            (edxstaff) $> edx_replace_staff /path/to/input/csv
-        
-            # when done
-            (edxstaff) $> deactivate
-        
-        On later runs you can do a simpler version:
-        
-          $> source edxstaff/bin/activate
-          (edxstaff) $> edx_replace_staff /path/to/input/csv
-          (edxstaff) $> deactivate
-        
-        Run the whole process from the top if you need to reinstall (for instance, if the script and/or its requirements change).
-        
-        ## Command-line options:
-        
-        * -h or --help: print the instructions and quit.
-        * -l or --list: list staff in each course, make no changes.
-        * -v or --visible: run with a visible browser instead of a headless one.
-        
 Keywords: hx edx staff edx_replace_staff
 Platform: UNKNOWN
 Classifier: Development Status :: Development Status :: 5 - Production/Stable
@@ -74,3 +14,66 @@ Classifier: Natural Language :: English
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.6
 Classifier: Programming Language :: Python :: 3.8
+License-File: LICENSE
+
+# edx_replace_staff
+
+Adds and/or removes staff in multiple edX courses at once. Can also be run with the
+--list option to only create a list of who's staff where rather than making changes.
+
+Using this script requires a CSV file with the following headers. You can find an example csv file in the `test` folder.
+
+* **URL** - the address of class' Course Team Settings page.
+* **Add** - the e-mail addresses of the staff to be added.
+* **Promote** - promotes an existing staff member to Admin.
+* **Remove** - removes staff from the course, regardless of whether they're currently Admin or not.
+* **Demote** - removes Admin status, but leaves the user as staff.
+
+When you have multiple people in any of these categories, space-separate them. You can find an example in the test folder.
+
+## Chrome Web Driver
+
+This repo includes a Mac version of the [Chrome webdriver](https://chromedriver.chromium.org/), which is licensed under the a [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name).
+
+Since chromedriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to
+
+## Instructions
+
+To install and use for the first time:
+
+    # clone this repo
+    $> git clone https://github.com/Colin-Fredericks/edx_replace_staff.git
+
+    # create a virtualenv and activate it
+    $> python3 -m venv edxstaff
+    $> source edxstaff/bin/activate
+    (edxstaff) $>
+
+    # install requirements
+    (edxstaff) $> cd hx_util
+    (edxstaff) $> pip3 install -r requirements.txt
+
+    # install hx_util
+    (edxstaff) $> pip3 install .
+
+    # to add or remove staff
+    (edxstaff) $> edx_replace_staff /path/to/input/csv
+
+    # when done
+    (edxstaff) $> deactivate
+
+On later runs you can do a simpler version:
+
+  $> source edxstaff/bin/activate
+  (edxstaff) $> edx_replace_staff /path/to/input/csv
+  (edxstaff) $> deactivate
+
+Run the whole process from the top if you need to reinstall (for instance, if the script and/or its requirements change).
+
+## Command-line options:
+
+* -h or --help: print the instructions and quit.
+* -l or --list: list staff in each course, make no changes.
+* -v or --visible: run with a visible browser instead of a headless one.
+
+

@@ -8,3 +8,4 @@ edx_staffing.log
 build/
 .DS_Store
 remaining_courses.csv
+edx_replace_staff/.DS_Store
