@@ -179,6 +179,7 @@ def signIn(driver, username, password):
     # Locations
     login_page = "https://authn.edx.org/login"
     username_input_css = "#emailOrUsername"
+    user_button_css = "button#user"
     password_input_css = "#password"
     login_button_css = ".login-button-width"
 
@@ -187,6 +188,9 @@ def signIn(driver, username, password):
     driver.get(login_page)
 
     # Sign in
+    found_username_field = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
+    )
     username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
     username_field.clear()
     username_field.send_keys(username)
@@ -194,13 +198,15 @@ def signIn(driver, username, password):
     password_field.clear()
     password_field.send_keys(password)
     login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
-    login_button.click()
+    driver.execute_script("arguments[0].click();", login_button) 
+    # login_button.click()
 
     # Check to make sure we're signed in.
     # There are several possible fail states to check for.
+    # First check for the user button, which is present on the dashboard page.
     try:
         found_dashboard = WebDriverWait(driver, 15).until(
-            EC.title_contains("Dashboard")
+            EC.presence_of_element_located((By.CSS_SELECTOR, user_button_css))
         )
     except (
         selenium_exceptions.TimeoutException,
