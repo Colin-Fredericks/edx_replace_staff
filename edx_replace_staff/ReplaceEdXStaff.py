@@ -11,6 +11,7 @@ import argparse
 import traceback
 from getpass import getpass
 from selenium import webdriver
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -183,49 +184,76 @@ def signIn(driver, username, password):
     password_input_css = "#password"
     login_button_css = ".login-button-width"
 
-    # Open the edX sign-in page
-    log("Logging in...")
-    driver.get(login_page)
+    # Apparently we have to run this more than once sometimes.
+    login_count = 0
+    while login_count < 3:
 
-    # Sign in
-    found_username_field = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
-    )
-    username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
-    username_field.clear()
-    username_field.send_keys(username)
-    password_field = driver.find_elements(By.CSS_SELECTOR, password_input_css)[0]
-    password_field.clear()
-    password_field.send_keys(password)
-    login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
-    driver.execute_script("arguments[0].click();", login_button) 
-    # login_button.click()
+        # Open the edX sign-in page
+        log("Logging in...")
+        driver.get(login_page)
 
-    # Check to make sure we're signed in.
-    # There are several possible fail states to check for.
-    # First check for the user button, which is present on the dashboard page.
-    try:
-        found_dashboard = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, user_button_css))
-        )
-    except (
-        selenium_exceptions.TimeoutException,
-        selenium_exceptions.InvalidSessionIdException,
-    ):
-        log(traceback.print_exc(), "WARNING")
-        login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
-        if len(login_fail) > 0:
-            log("Incorrect login or password")
-        need_reset = driver.find_elements(By.CSS_SELECTOR, "#password-security-reset-password")
-        if len(need_reset) > 0:
-            log("Password reset required")
-        if "Forbidden" in driver.title:
-            log("403: Forbidden")
-        driver.close()
-        sys.exit("Login issue or course dashboard page timed out.")
+        # Sign in
+        try:
+            found_username_field = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
+            )
+        except selenium_exceptions.TimeoutException:
+            driver.quit()
+            sys.exit("Timed out waiting for username field.")
+        
+        username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
+        username_field.clear()
+        username_field.send_keys(username)
+        print("Username sent")
 
-    log("Logged in.")
-    return
+        password_field = driver.find_elements(By.CSS_SELECTOR, password_input_css)[0]
+        password_field.clear()
+        password_field.send_keys(password)
+        print("Password sent")
+
+        # Using ActionChains is necessary because edX put a div over the login button.
+        login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
+        actions = ActionChains(driver)
+        actions.move_to_element(login_button).click().perform()
+        print("Login button clicked")
+
+        # Check to make sure we're signed in.
+        # There are several possible fail states to check for.
+        found_dashboard = False
+        try:
+            print("Finding dashboard...")
+            found_dashboard = WebDriverWait(driver, 10).until(EC.title_contains("home"))
+        except (
+            selenium_exceptions.TimeoutException,
+            selenium_exceptions.InvalidSessionIdException,
+        ):
+            log(traceback.print_exc(), "WARNING")
+            login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
+            if len(login_fail) > 0:
+                log("Incorrect login or password")
+            need_reset = driver.find_elements(
+                By.CSS_SELECTOR, "#password-security-reset-password"
+            )
+            if len(need_reset) > 0:
+                log("Password reset required")
+            if "Forbidden" in driver.title:
+                log("403: Forbidden")
+
+        # If we're logged in, we're done.
+        if found_dashboard:
+            driver.close()
+            sys.exit("Login successful.")
+            log("Logged in.")
+            return
+
+        login_count += 1
+        print("Login count: " + str(login_count))
+
+    driver.close()
+    log("Login failed.")
+    sys.exit("Login issue or course dashboard page timed out.")
+
+    
 
 
 def addStaff(driver, email_list):
@@ -614,10 +642,8 @@ the script is to run. Press control-C to cancel.
                 ) as remaining_courses:
                     fieldnames = ["Course", "URL", "Add", "Promote", "Remove", "Demote"]
                     writer = csv.DictWriter(
-                        remaining_courses, 
-                        fieldnames=fieldnames,
-                        extrasaction="ignore"
-                        )
+                        remaining_courses, fieldnames=fieldnames, extrasaction="ignore"
+                    )
 
                     writer.writeheader()
                     for x in skipped_classes:
