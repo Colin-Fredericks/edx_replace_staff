@@ -184,17 +184,17 @@ def signIn(driver, username, password):
     password_input_css = "#password"
     login_button_css = ".login-button-width"
 
+    # Open the edX sign-in page
+    log("Logging in...")
+    driver.get(login_page)
+
     # Apparently we have to run this more than once sometimes.
     login_count = 0
     while login_count < 3:
 
-        # Open the edX sign-in page
-        log("Logging in...")
-        driver.get(login_page)
-
         # Sign in
         try:
-            found_username_field = WebDriverWait(driver, 10).until(
+            found_username_field = WebDriverWait(driver, 100).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
             )
         except selenium_exceptions.TimeoutException:
@@ -218,11 +218,25 @@ def signIn(driver, username, password):
         print("Login button clicked")
 
         # Check to make sure we're signed in.
+        # First, check to see if we're still on the same page, a common fail state.
+        
+        print("Waiting for URL change...")
+        try:
+            url_change = WebDriverWait(driver, 10).until(
+                EC.url_changes(driver.current_url)
+            )
+        except selenium_exceptions.TimeoutException:
+            log("URL didn't change", "WARNING")
+            print("URL did not change. Trying again.")
+            login_count += 1
+            print("Login attempt count: " + str(login_count))
+            continue
+
         # There are several possible fail states to check for.
         found_dashboard = False
         try:
             print("Finding dashboard...")
-            found_dashboard = WebDriverWait(driver, 10).until(EC.title_contains("home"))
+            found_dashboard = WebDriverWait(driver, 10).until(EC.title_contains("Home"))
         except (
             selenium_exceptions.TimeoutException,
             selenium_exceptions.InvalidSessionIdException,
@@ -241,19 +255,16 @@ def signIn(driver, username, password):
 
         # If we're logged in, we're done.
         if found_dashboard:
-            driver.close()
-            sys.exit("Login successful.")
             log("Logged in.")
             return
 
         login_count += 1
-        print("Login count: " + str(login_count))
+        print("Login attempt count: " + str(login_count))
 
     driver.close()
     log("Login failed.")
     sys.exit("Login issue or course dashboard page timed out.")
 
-    
 
 
 def addStaff(driver, email_list):
