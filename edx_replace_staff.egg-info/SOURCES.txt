@@ -5,6 +5,7 @@ setup.py
 edx_replace_staff/ReplaceEdXStaff.py
 edx_replace_staff/__init__.py
 edx_replace_staff/chromedriver
+edx_replace_staff/geckodriver
 edx_replace_staff.egg-info/PKG-INFO
 edx_replace_staff.egg-info/SOURCES.txt
 edx_replace_staff.egg-info/dependency_links.txt

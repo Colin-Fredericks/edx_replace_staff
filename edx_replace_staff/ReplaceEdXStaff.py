@@ -14,7 +14,8 @@ from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.support import expected_conditions as EC
@@ -92,13 +93,22 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
 
 
 # Instantiating a headless Chrome browser
-def setUpWebdriver(run_headless):
+def setUpWebdriver(run_headless, driver_choice):
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
-    op = Options()
-    if run_headless:
-        op.add_argument("--headless")
-    driver = webdriver.Chrome(options=op)
+    if driver_choice == "firefox":
+        op = FirefoxOptions()
+        if run_headless:
+            op.headless = True
+        driver = webdriver.Firefox(options=op)
+    else:
+        op = ChromeOptions()
+        op.add_argument("start-maximized")
+        if run_headless:
+            op.add_argument("--headless")
+        driver = webdriver.Chrome(options=op)
+    
+
     driver.implicitly_wait(1)
     return driver
 
@@ -200,42 +210,42 @@ def signIn(driver, username, password):
         except selenium_exceptions.TimeoutException:
             driver.quit()
             sys.exit("Timed out waiting for username field.")
-        
+
         username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
         username_field.clear()
         username_field.send_keys(username)
-        print("Username sent")
+        log("Username sent")
 
         password_field = driver.find_elements(By.CSS_SELECTOR, password_input_css)[0]
         password_field.clear()
         password_field.send_keys(password)
-        print("Password sent")
+        log("Password sent")
 
         # Using ActionChains is necessary because edX put a div over the login button.
         login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
         actions = ActionChains(driver)
         actions.move_to_element(login_button).click().perform()
-        print("Login button clicked")
+        log("Login button clicked")
 
         # Check to make sure we're signed in.
         # First, check to see if we're still on the same page, a common fail state.
-        
-        print("Waiting for URL change...")
+
+        """
+        log("Waiting for URL change...")
         try:
-            url_change = WebDriverWait(driver, 10).until(
+            url_change = WebDriverWait(driver, 15).until(
                 EC.url_changes(driver.current_url)
             )
         except selenium_exceptions.TimeoutException:
-            log("URL didn't change", "WARNING")
-            print("URL did not change. Trying again.")
+            log("URL didn't change. Trying again.", "WARNING")
             login_count += 1
             print("Login attempt count: " + str(login_count))
             continue
-
+        """
         # There are several possible fail states to check for.
         found_dashboard = False
         try:
-            print("Finding dashboard...")
+            log("Finding dashboard...")
             found_dashboard = WebDriverWait(driver, 10).until(EC.title_contains("Home"))
         except (
             selenium_exceptions.TimeoutException,
@@ -259,12 +269,11 @@ def signIn(driver, username, password):
             return
 
         login_count += 1
-        print("Login attempt count: " + str(login_count))
+        log("Login attempt count: " + str(login_count))
 
     driver.close()
     log("Login failed.")
     sys.exit("Login issue or course dashboard page timed out.")
-
 
 
 def addStaff(driver, email_list):
@@ -499,6 +508,7 @@ def ReplaceEdXStaff():
     parser.add_argument("-h", "--help", action="store_true")
     parser.add_argument("-l", "--list", action="store_true")
     parser.add_argument("-v", "--visible", action="store_true")
+    parser.add_argument("-f", "--firefox", action="store_true")
     parser.add_argument("csvfile", default=None)
 
     args = parser.parse_args()
@@ -507,6 +517,10 @@ def ReplaceEdXStaff():
 
     if args.visible:
         run_headless = False
+
+    if args.firefox:
+        log("Using Firefox instead of Chrome.")
+        driver_choice = "firefox"
 
     if not os.path.exists(args.csvfile):
         sys.exit("Input file not found: " + args.csvfile)
@@ -526,7 +540,7 @@ the script is to run. Press control-C to cancel.
     start_time = datetime.datetime.now()
 
     # Prep the web driver and sign into edX.
-    driver = setUpWebdriver(run_headless)
+    driver = setUpWebdriver(run_headless, driver_choice)
     signIn(driver, username, password)
 
     # Open the csv and read it to a set of dicts
