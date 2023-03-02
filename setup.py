@@ -65,7 +65,10 @@ setup(
             "{}={}.ReplaceEdXStaff:ReplaceEdXStaff".format(project_name, project_name),
         ]
     },
-    data_files=[("webdriver", ["edx_replace_staff/chromedriver"])],
+    data_files=[
+        ("chromedriver", ["edx_replace_staff/chromedriver"]),
+        ("geckodriver", ["edx_replace_staff/geckodriver"]),
+        ],
     include_package_data=True,
     install_requires=requirements,
     zip_safe=False,
