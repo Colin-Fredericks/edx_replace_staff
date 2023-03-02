@@ -107,7 +107,6 @@ def setUpWebdriver(run_headless, driver_choice):
         if run_headless:
             op.add_argument("--headless")
         driver = webdriver.Chrome(options=op)
-    
 
     driver.implicitly_wait(1)
     return driver
