@@ -636,6 +636,7 @@ the script is to run. Press control-C to cancel.
                 # Split e-mail list on spaces and throw out blank elements.
                 email_list_with_blanks = each_row[j].split(" ")
                 email_list = [x for x in email_list_with_blanks if x != ""]
+                email_list = [x.strip() for x in email_list]
                 if len(each_row[j]) > 0:
                     jobs[j](driver, email_list)
                     # You have to wait because I don't even know why.
