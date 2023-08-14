@@ -92,21 +92,21 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
         f.writelines(lines[-max_lines:])
 
 
-# Instantiating a headless Chrome browser
+# Instantiating a headless browser
 def setUpWebdriver(run_headless, driver_choice):
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
-    if driver_choice == "firefox":
-        op = FirefoxOptions()
-        if run_headless:
-            op.headless = True
-        driver = webdriver.Firefox(options=op)
-    else:
+    if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
         if run_headless:
             op.add_argument("--headless")
         driver = webdriver.Chrome(options=op)
+    else:
+        op = FirefoxOptions()
+        if run_headless:
+            op.headless = True
+        driver = webdriver.Firefox(options=op)
 
     driver.implicitly_wait(1)
     return driver
@@ -508,6 +508,7 @@ def ReplaceEdXStaff():
     parser.add_argument("-l", "--list", action="store_true")
     parser.add_argument("-v", "--visible", action="store_true")
     parser.add_argument("-f", "--firefox", action="store_true")
+    parser.add_argument("-c", "--chrome", action="store_true")
     parser.add_argument("csvfile", default=None)
 
     args = parser.parse_args()
@@ -517,9 +518,9 @@ def ReplaceEdXStaff():
     if args.visible:
         run_headless = False
 
-    if args.firefox:
-        log("Using Firefox instead of Chrome.")
-        driver_choice = "firefox"
+    if args.chrome:
+        log("Using Chrome instead of Firefox.")
+        driver_choice = "chrome"
 
     if not os.path.exists(args.csvfile):
         sys.exit("Input file not found: " + args.csvfile)
