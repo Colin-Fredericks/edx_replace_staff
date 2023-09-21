@@ -515,9 +515,11 @@ def ReplaceEdXStaff():
     if args.help or args.csvfile is None:
         sys.exit(instructions)
 
+    run_headless = True
     if args.visible:
         run_headless = False
 
+    driver_choice = "firefox"
     if args.chrome:
         log("Using Chrome instead of Firefox.")
         driver_choice = "chrome"
