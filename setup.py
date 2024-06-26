@@ -66,9 +66,9 @@ setup(
         ]
     },
     data_files=[
-        ("chromedriver", ["edx_replace_staff/chromedriver"]),
-        ("geckodriver", ["edx_replace_staff/geckodriver"]),
-        ],
+        ("webdriver", ["edx_replace_staff/chromedriver"]),
+        ("geckodriver", ["edx_replace_staff/geckodriver"])
+    ],
     include_package_data=True,
     install_requires=requirements,
     zip_safe=False,
