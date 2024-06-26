@@ -43,7 +43,8 @@ Options:
   -h or --help:    Print this message and exit.
   -l or --list:    List all staff and admin in all courses. Make no changes.
                    Only requires the URL column.
-  -v or --visible: Run the browser in normal mode instead of headless.
+  -c or --chrome:   Use Chrome instead of default Firefox.
+  -v or --visible:  Run the browser in normal mode instead of headless.
 
 """
 
@@ -92,13 +93,22 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
         f.writelines(lines[-max_lines:])
 
 
-# Instantiating a headless browser
-def setUpWebdriver(run_headless, driver_choice):
+# Instantiating a headless Chrome or Firefox browser
+def setUpWebdriver(run_headless, driver_choice, download_directory):
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
+    if download_directory is not None:
+        full_destination = os.path.join("~/Downloads", download_directory)
+        log("Setting download directory to " + full_destination)
+        if not os.path.exists(full_destination):
+            os.makedirs(full_destination)
+
     if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
+        if download_directory is not None:
+            prefs = {"download.default_directory": full_destination}
+            op.add_experimental_option("prefs", prefs)
         if run_headless:
             op.add_argument("--headless")
         driver = webdriver.Chrome(options=op)
@@ -106,6 +116,9 @@ def setUpWebdriver(run_headless, driver_choice):
         op = FirefoxOptions()
         if run_headless:
             op.headless = True
+        if download_directory is not None:
+            op.set_preference("browser.download.folderList", 2)
+            op.set_preference("browser.download.dir", full_destination)
         driver = webdriver.Firefox(options=op)
 
     driver.implicitly_wait(1)
@@ -185,40 +198,49 @@ def closeErrorDialog(driver):
 
 
 def signIn(driver, username, password):
-
     # Locations
     login_page = "https://authn.edx.org/login"
     username_input_css = "#emailOrUsername"
-    user_button_css = "button#user"
     password_input_css = "#password"
-    login_button_css = ".login-button-width"
+    login_button_css = "#sign-in"
 
     # Open the edX sign-in page
     log("Logging in...")
     driver.get(login_page)
 
+    # Wait a second.
+    time.sleep(1)
+
     # Apparently we have to run this more than once sometimes.
     login_count = 0
     while login_count < 3:
-
         # Sign in
         try:
-            found_username_field = WebDriverWait(driver, 100).until(
+            found_username_field = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
             )
         except selenium_exceptions.TimeoutException:
             driver.quit()
             sys.exit("Timed out waiting for username field.")
 
+        # Wait a second.
+        time.sleep(1)
+
         username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
         username_field.clear()
         username_field.send_keys(username)
         log("Username sent")
 
+        # Wait a second.
+        time.sleep(1)
+
         password_field = driver.find_elements(By.CSS_SELECTOR, password_input_css)[0]
         password_field.clear()
         password_field.send_keys(password)
         log("Password sent")
+
+        # Wait a second.
+        time.sleep(1)
 
         # Using ActionChains is necessary because edX put a div over the login button.
         login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
@@ -227,25 +249,11 @@ def signIn(driver, username, password):
         log("Login button clicked")
 
         # Check to make sure we're signed in.
-        # First, check to see if we're still on the same page, a common fail state.
-
-        """
-        log("Waiting for URL change...")
-        try:
-            url_change = WebDriverWait(driver, 15).until(
-                EC.url_changes(driver.current_url)
-            )
-        except selenium_exceptions.TimeoutException:
-            log("URL didn't change. Trying again.", "WARNING")
-            login_count += 1
-            print("Login attempt count: " + str(login_count))
-            continue
-        """
         # There are several possible fail states to check for.
         found_dashboard = False
         try:
             log("Finding dashboard...")
-            found_dashboard = WebDriverWait(driver, 10).until(EC.title_contains("Home"))
+            found_dashboard = WebDriverWait(driver, 10).until(EC.url_contains("home"))
         except (
             selenium_exceptions.TimeoutException,
             selenium_exceptions.InvalidSessionIdException,
@@ -278,9 +286,9 @@ def signIn(driver, username, password):
 def addStaff(driver, email_list):
 
     # Locations for add-staff inputs
-    new_team_css = "a.create-user-button"
-    new_staff_email_css = "input#user-email-input"
-    add_user_css = "div.actions button.action-primary"
+    new_team_xpath = "//button[text()='New team member']"
+    new_staff_email_xpath = "//input[@name='email']"
+    add_user_xpath = "//button[text()='Add user']"
 
     # For each address:
     for email in email_list:
@@ -297,7 +305,7 @@ def addStaff(driver, email_list):
 
             try:
                 # Click the "New Team Member" button
-                new_team_buttons = driver.find_elements(By.CSS_SELECTOR, new_team_css)
+                new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
                 new_team_buttons[0].click()
             except Exception as e:
                 # If that failed, there could be an error message up. Try to close it.
@@ -305,11 +313,11 @@ def addStaff(driver, email_list):
 
             try:
                 # Put the e-mail into the input box.
-                email_boxes = driver.find_elements(By.CSS_SELECTOR, new_staff_email_css)
+                email_boxes = driver.find_elements(By.XPATH, new_staff_email_xpath)
                 email_boxes[0].clear()
                 email_boxes[0].send_keys(email)
                 # Click "Add User"
-                add_user_buttons = driver.find_elements(By.CSS_SELECTOR, add_user_css)
+                add_user_buttons = driver.find_elements(By.XPATH, add_user_xpath)
                 add_user_buttons[0].click()
 
                 # Now that we've clicked the add button,
@@ -344,10 +352,28 @@ def promoteStaff(driver, email_list):
     for email in email_list:
 
         success = False
-        promotion_css = (
-            "li[data-email='"
-            + email.lower()
-            + "'] a.make-instructor.admin-role.add-admin-role"
+        
+        # Structure:
+        # <div class="course-team-member">
+        #  <div class="member-info">
+        #   <a>e-mail address</a>
+        #  </div>
+        #  <div class="member-actions">
+        #   <button>Add admin access</button>
+        #   <button data-testid="delete-button"></button>
+        #  </div>
+        # </div>
+
+        # Find the "Add admin access" button for this user.
+        promotion_xpath = (
+            "//div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-info')]"
+            + "//a[text()='"
+            + email
+            + "']"
+            + "/ancestor::div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-actions')]"
+            + "//button[text()='Add admin access']"
         )
 
         if userIsStaff(driver, email):
@@ -358,7 +384,7 @@ def promoteStaff(driver, email_list):
                 try:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(
-                        By.CSS_SELECTOR, promotion_css
+                        By.XPATH, promotion_xpath
                     )
                 except:
                     log(
@@ -389,13 +415,33 @@ def promoteStaff(driver, email_list):
 
 def removeStaff(driver, email_list):
 
-    # The "remove" button is a link inside an LI.
-    # The LI has data-email equal to the user's email address.
-    trash_can_css = "a.remove-user"
-    confirm_removal_css = "#prompt-warning.is-shown button.action-primary"
+    confirm_removal_xpath = "//button[text()='Delete']"
 
     # For each address:
     for email in email_list:
+
+        # Structure:
+        # <div class="course-team-member">
+        #  <div class="member-info">
+        #   <a>e-mail address</a>
+        #  </div>
+        #  <div class="member-actions">
+        #   <button>Add admin access</button>
+        #   <button data-testid="delete-button"></button>
+        #  </div>
+        # </div>
+
+        # Find the delete button for this user.
+        removal_xpath = (
+            "//div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-info')]"
+            + "//a[text()='"
+            + email
+            + "']"
+            + "/ancestor::div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-actions')]"
+            + "//button[@data-testid='delete-button']"
+        )
 
         # If this user isn't present, move on to the next one.
         if not userIsPresent(driver, email):
@@ -403,20 +449,19 @@ def removeStaff(driver, email_list):
             continue
 
         success = False
-        removal_button_css = "li[data-email='" + email.lower() + "'] " + trash_can_css
 
         for x in range(0, 3):
             try:
                 # E-mail addresses in the data attribute are lowercased.
                 remove_button = driver.find_elements(
-                    By.CSS_SELECTOR, removal_button_css
+                    By.XPATH, removal_xpath
                 )
                 # Click the trash can ("remove user" button)
                 remove_button[0].click()
                 # Click the "confirm" button.
                 log("Trying to remove " + email)
                 confirm_button = driver.find_elements(
-                    By.CSS_SELECTOR, confirm_removal_css
+                    By.XPATH, confirm_removal_xpath
                 )
                 confirm_button[0].click()
                 success = True
@@ -441,10 +486,27 @@ def demoteStaff(driver, email_list):
     for email in email_list:
 
         success = False
-        demotion_css = (
-            "li[data-email='"
-            + email.lower()
-            + "'] a.make-staff.admin-role.remove-admin-role"
+        # Structure:
+        # <div class="course-team-member">
+        #  <div class="member-info">
+        #   <a>e-mail address</a>
+        #  </div>
+        #  <div class="member-actions">
+        #   <button>Remove admin access</button>
+        #   <button data-testid="delete-button"></button>
+        #  </div>
+        # </div>
+
+        # Find the delete button for this user.
+        demotion_xpath = (
+            "//div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-info')]"
+            + "//a[text()='"
+            + email
+            + "']"
+            + "/ancestor::div[contains(@class, 'course-team-member')]"
+            + "//div[contains(@class, 'member-actions')]"
+            + "//button[text()='Remove admin access']"
         )
 
         if userIsAdmin(driver, email):
@@ -455,7 +517,7 @@ def demoteStaff(driver, email_list):
                 try:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(
-                        By.CSS_SELECTOR, demotion_css
+                        By.XPATH, demotion_xpath
                     )
                 except:
                     log(

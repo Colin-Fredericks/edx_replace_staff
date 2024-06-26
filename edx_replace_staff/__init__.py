@@ -2,4 +2,4 @@
 
 __author__ = "Colin Fredericks"
 __email__ = "colin_fredericks"
-__version__ = "1.1.0"
+__version__ = "1.2.0" # Updating for new staffing page

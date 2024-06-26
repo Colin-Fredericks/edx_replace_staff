@@ -13,12 +13,11 @@ Using this script requires a CSV file with the following headers. You can find a
 
 When you have multiple people in any of these categories, space-separate them. You can find an example in the test folder.
 
-## Chrome Web Driver
+## Web Driver
 
-This repo includes a Mac version of the [Chrome webdriver](https://chromedriver.chromium.org/), which is licensed under the a [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name).
+This repo includes a Mac version of geckodriver for Firefox, which is under the [Mozilla Public License 2.0](https://github.com/mozilla/geckodriver/blob/master/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name). It also includes the [Chrome webdriver](https://chromedriver.chromium.org/), which of course has its own [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you have Safari, you already have safaridriver available, though you may have to [enable it](https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari).
 
-Since chromedriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to
-
+Since geckodriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to run it just fine on the next attempt.
 ## Instructions
 
 To install and use for the first time:
