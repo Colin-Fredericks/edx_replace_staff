@@ -94,40 +94,31 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
 
 
 # Instantiating a headless Chrome or Firefox browser
-def setUpWebdriver(run_headless, driver_choice, download_directory):
+def setUpWebdriver(run_headless, driver_choice):
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
-    if download_directory is not None:
-        full_destination = os.path.join("~/Downloads", download_directory)
-        log("Setting download directory to " + full_destination)
-        if not os.path.exists(full_destination):
-            os.makedirs(full_destination)
 
     if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
-        if download_directory is not None:
-            prefs = {"download.default_directory": full_destination}
-            op.add_experimental_option("prefs", prefs)
         if run_headless:
             op.add_argument("--headless")
         driver = webdriver.Chrome(options=op)
     else:
         op = FirefoxOptions()
+        op.binary_location = '/Applications/Firefox.app/Contents/MacOS/firefox'
         if run_headless:
             op.headless = True
-        if download_directory is not None:
-            op.set_preference("browser.download.folderList", 2)
-            op.set_preference("browser.download.dir", full_destination)
-        driver = webdriver.Firefox(options=op)
+        # driver = webdriver.Firefox(options=op)
+        driver = webdriver.Firefox(executable_path='/Users/colinfredericks/Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver', options=op)
 
     driver.implicitly_wait(1)
     return driver
 
 
 def userIsPresent(driver, email):
-    user_present_css = "li[data-email='" + email.lower() + "']"
-    user_present = driver.find_elements(By.CSS_SELECTOR, user_present_css)
+    is_admin_xpath = "//a[text()='" + email + "']"
+    user_present = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(user_present) > 0:
         return True
     else:
@@ -144,8 +135,24 @@ def userIsStaff(driver, email):
 
 
 def userIsAdmin(driver, email):
-    admin_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-instructor"
-    admin_flag = driver.find_elements(By.CSS_SELECTOR, admin_user_css)
+
+    # Structure:
+    # <span class="badge-current-user bg-primary-700 text-light-100 badge badge-primary">
+    #   Admin
+    #   <span class="badge-current-user x-small text-light-500">
+    #     You!
+    #   </span>
+    # </span>
+
+    # Xpath to find the admin flag for this user.
+    is_admin_xpath = (
+        "//span[contains(@class, 'badge-current-user')]"
+        + "[contains(text(), 'Admin')]"
+        + "//span[contains(@class, 'badge-current-user')]"
+        + "[contains(text(), 'You!')]"
+    )
+
+    admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(admin_flag) > 0:
         return True
     else:
@@ -676,7 +683,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             if (
-                "Course Team Settings" not in driver.title
+                "Course team" not in driver.title
                 or "Forbidden" in driver.title
             ):
                 log("\nCould not open course " + each_row["URL"])
