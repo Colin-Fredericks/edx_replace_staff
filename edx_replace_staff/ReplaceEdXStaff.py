@@ -422,7 +422,7 @@ def promoteStaff(driver, email_list):
 
 def removeStaff(driver, email_list):
 
-    confirm_removal_xpath = "//button[text()='Delete']"
+    confirm_removal_xpath = "//div[@class='pgn__modal-footer']//button[text()='Delete']"
 
     # For each address:
     for email in email_list:
