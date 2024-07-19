@@ -40,11 +40,12 @@ and which people couldn't be removed. If the --list option is used,
 the CSV instead shows who's admin and staff in all courses.
 
 Options:
-  -h or --help:    Print this message and exit.
-  -l or --list:    List all staff and admin in all courses. Make no changes.
-                   Only requires the URL column.
+  -h or --help:     Print this message and exit.
+  -l or --list:     List all staff and admin in all courses. Make no changes.
+                    Only requires the URL column.
   -c or --chrome:   Use Chrome instead of default Firefox.
   -v or --visible:  Run the browser in normal mode instead of headless.
+  --cs50:           Include CS50 courses. By default, they are skipped.
 
 """
 
@@ -578,6 +579,7 @@ def ReplaceEdXStaff():
     parser.add_argument("-v", "--visible", action="store_true")
     parser.add_argument("-f", "--firefox", action="store_true")
     parser.add_argument("-c", "--chrome", action="store_true")
+    parser.add_argument("--cs50", action="store_true")
     parser.add_argument("csvfile", default=None)
 
     args = parser.parse_args()
@@ -631,6 +633,12 @@ the script is to run. Press control-C to cancel.
 
             num_classes += 1
             driver.get(each_row["URL"].strip())
+
+            # Skip CS50 courses unless we've specifically asked to include them.
+            if "cs50" in driver.title.lower() and not args.cs50:
+                log("Skipping CS50 course " + each_row["URL"])
+                skipped_classes.append(each_row)
+                continue
 
             # Check to make sure we've opened a new page.
             # The e-mail input box should be invisible.
