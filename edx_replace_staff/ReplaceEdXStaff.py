@@ -140,8 +140,12 @@ def userIsPresent(driver: webdriver, email: str) -> bool:
 
 def userIsStaff(driver: webdriver, email: str) -> bool:
     """Checks to see if user is staff. Returns boolean."""
-    staff_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-staff"
-    staff_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
+    staff_user_xpath = (
+        "//span[contains(@class, 'badge-current-user') and contains(text(), "
+        + email.lower()
+        + " )]/ancestor::div[contains(@class, 'member-info')]"
+    )
+    staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
     if len(staff_flag) > 0:
         return True
     else:
@@ -181,18 +185,14 @@ def getAllUsers(driver: webdriver) -> dict:
     """
     Returns a dictionary with two lists of e-mail addresses: staff and admin.
     """
-    staff_list = []
-    admin_list = []
 
-    staff_xpath = "//span[contains(@class, 'flag-role-staff')]/ancestor::li"
-    admin_xpath = "//span[contains(@class, 'flag-role-instructor')]/ancestor::li"
+    staff_xpath = "//span[contains(@class, 'badge-current-user') and contains(text(), 'Staff')]/following-sibling::a"
+    admin_xpath = "//span[contains(@class, 'badge-current-user') and contains(text(), 'Admin')]/following-sibling::a"
 
     all_staff = driver.find_elements(By.XPATH, staff_xpath)
-    for x in all_staff:
-        staff_list.append(x.get_attribute("data-email"))
     all_admins = driver.find_elements(By.XPATH, admin_xpath)
-    for y in all_admins:
-        admin_list.append(y.get_attribute("data-email"))
+    staff_list = [x.text for x in all_staff]
+    admin_list = [y.text for y in all_admins]
 
     return {"staff": staff_list, "admin": admin_list}
 
@@ -695,7 +695,6 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # If we only need to get users and status, we can do that easier.
-            # TODO: ...but we actually have to fix this, so...
             if args.list:
                 log("Getting staff for " + each_row["URL"])
                 user_list = getAllUsers(driver)
