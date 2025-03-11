@@ -295,7 +295,7 @@ def closeErrorDialog(driver: webdriver) -> dict:
     """
 
     # Try to find the "ok" button for the error dialogs.
-    wrong_email_css = "#prompt-error.is-shown button.action-primary"
+    wrong_email_css = "div[aria-label='Error adding user'] button"
     wrong_email_ok_button = driver.find_elements(By.CSS_SELECTOR, wrong_email_css)
 
     # If there is an error dialog open, report why, clear it, and move on.
@@ -452,10 +452,18 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
     If they're admin you have to demote them first.
     """
 
-    confirm_removal_xpath = "//div[@class='pgn__modal-footer']//button[text()='Delete']"
+    confirm_removal_xpath = (
+        "//div[@contains(aria-label, "
+        "Delete course team member)]//button[text()='Delete']"
+    )
 
     # For each address:
     for email in email_list:
+
+        # If this user isn't present, move on to the next one.
+        if not userIsPresent(driver, email):
+            log(email + " was already not in this course.")
+            continue
 
         # Structure:
         # <div class="course-team-member">
@@ -479,11 +487,6 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
             + "//div[contains(@class, 'member-actions')]"
             + "//button[@data-testid='delete-button']"
         )
-
-        # If this user isn't present, move on to the next one.
-        if not userIsPresent(driver, email):
-            log(email + " was already not in this course.")
-            continue
 
         success = False
 
