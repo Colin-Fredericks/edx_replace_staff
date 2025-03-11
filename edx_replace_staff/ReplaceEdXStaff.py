@@ -228,9 +228,9 @@ def userIsPresent(driver: webdriver, email: str) -> bool:
 def userIsStaff(driver: webdriver, email: str) -> bool:
     """Checks to see if user is staff. Returns boolean."""
     staff_user_xpath = (
-        "//span[contains(@class, 'badge-current-user') and contains(text(), "
+        "//span[contains(@class, 'badge-current-user') and contains(text(), '"
         + email.lower()
-        + " )]/ancestor::div[contains(@class, 'member-info')]"
+        + "' )]/ancestor::div[contains(@class, 'member-info')]"
     )
     staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
     if len(staff_flag) > 0:
@@ -433,7 +433,7 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
                     # log(repr(e), "DEBUG")
                     log("Couldn't click promotion button. Trying again...")
         else:
-            if userIsAdmin(driver, email):
+            if userIsAdmin(driver):
                 log(email + " is already admin.")
             else:
                 log(email + " is not in this course. Add them before promoting them.")
@@ -546,7 +546,7 @@ def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
             + "//button[text()='Remove admin access']"
         )
 
-        if userIsAdmin(driver, email):
+        if userIsAdmin(driver):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
@@ -712,7 +712,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # Check to make sure we have the ability to change user status.
-            if not userIsAdmin(driver, username):
+            if not userIsAdmin(driver):
                 log("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
