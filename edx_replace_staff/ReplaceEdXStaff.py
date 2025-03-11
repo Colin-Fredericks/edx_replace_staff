@@ -695,6 +695,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # If we only need to get users and status, we can do that easier.
+            # TODO: ...but we actually have to fix this, so...
             if args.list:
                 log("Getting staff for " + each_row["URL"])
                 user_list = getAllUsers(driver)

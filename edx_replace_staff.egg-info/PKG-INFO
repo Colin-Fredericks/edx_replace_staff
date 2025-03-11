@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: edx_replace_staff
-Version: 1.2.0
+Version: 1.2.1
 Summary: adds and/or removes staff in edX courses
 Home-page: https://github.com/Colin_Fredericks/edx_replace_staff
 Author: Colin Fredericks
@@ -31,6 +31,14 @@ Requires-Dist: trio
 Requires-Dist: trio-websocket
 Requires-Dist: urllib3
 Requires-Dist: wsproto
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: requires-dist
+Dynamic: summary
 
 # edx_replace_staff
 
