@@ -96,6 +96,13 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
 
 # Instantiating a headless Chrome or Firefox browser
 def setUpWebdriver(run_headless, driver_choice):
+    """
+    Sets up a Chrome or Firefox browser.
+
+    Parameters:
+    run_headless (bool): Whether to run the browser in headless mode.
+    driver_choice (str): Which browser to use. Default is firefox, "chrome" is an option.
+    """
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
 
@@ -107,11 +114,14 @@ def setUpWebdriver(run_headless, driver_choice):
         driver = webdriver.Chrome(options=op)
     else:
         op = FirefoxOptions()
-        op.binary_location = '/Applications/Firefox.app/Contents/MacOS/firefox'
+        op.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
         if run_headless:
             op.headless = True
         # driver = webdriver.Firefox(options=op)
-        driver = webdriver.Firefox(executable_path='/Users/colinfredericks/Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver', options=op)
+        driver = webdriver.Firefox(
+            executable_path="/Users/colinfredericks/Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver",
+            options=op,
+        )
 
     driver.implicitly_wait(1)
     return driver
@@ -360,7 +370,7 @@ def promoteStaff(driver, email_list):
     for email in email_list:
 
         success = False
-        
+
         # Structure:
         # <div class="course-team-member">
         #  <div class="member-info">
@@ -391,9 +401,7 @@ def promoteStaff(driver, email_list):
                 log("Promoting " + email)
                 try:
                     # Find the promotion button for this user.
-                    promotion_button = driver.find_elements(
-                        By.XPATH, promotion_xpath
-                    )
+                    promotion_button = driver.find_elements(By.XPATH, promotion_xpath)
                 except:
                     log(
                         "No promotion button found. You may not have Admin access. Trying again...",
@@ -461,16 +469,12 @@ def removeStaff(driver, email_list):
         for x in range(0, 3):
             try:
                 # E-mail addresses in the data attribute are lowercased.
-                remove_button = driver.find_elements(
-                    By.XPATH, removal_xpath
-                )
+                remove_button = driver.find_elements(By.XPATH, removal_xpath)
                 # Click the trash can ("remove user" button)
                 remove_button[0].click()
                 # Click the "confirm" button.
                 log("Trying to remove " + email)
-                confirm_button = driver.find_elements(
-                    By.XPATH, confirm_removal_xpath
-                )
+                confirm_button = driver.find_elements(By.XPATH, confirm_removal_xpath)
                 confirm_button[0].click()
                 success = True
                 break
@@ -524,9 +528,7 @@ def demoteStaff(driver, email_list):
                 log("Demoting " + email)
                 try:
                     # Find the demotion button for this user.
-                    demotion_button = driver.find_elements(
-                        By.XPATH, demotion_xpath
-                    )
+                    demotion_button = driver.find_elements(By.XPATH, demotion_xpath)
                 except:
                     log(
                         "Couldn't find demotion button. You may not have Admin access. Trying again...",
@@ -690,10 +692,7 @@ the script is to run. Press control-C to cancel.
                 skipped_classes.append(each_row)
                 continue
 
-            if (
-                "Course team" not in driver.title
-                or "Forbidden" in driver.title
-            ):
+            if "Course team" not in driver.title or "Forbidden" in driver.title:
                 log("\nCould not open course " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
