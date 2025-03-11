@@ -1,3 +1,2 @@
 [console_scripts]
 edx_replace_staff = edx_replace_staff.ReplaceEdXStaff:ReplaceEdXStaff
-
