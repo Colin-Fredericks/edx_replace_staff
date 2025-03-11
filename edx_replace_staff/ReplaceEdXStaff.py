@@ -61,7 +61,7 @@ logger.addHandler(handler)
 
 
 # Just a faster thing to type and read.
-def log(text, level="INFO"):
+def log(text: str, level="INFO") -> None:
     print(text)
     if level == "DEBUG":
         logger.debug(text)
@@ -75,7 +75,7 @@ def log(text, level="INFO"):
         logger.critical(text)
 
 
-def trimLog(log_file="edx_staffing.log", max_lines=20000):
+def trimLog(log_file="edx_staffing.log", max_lines=20000) -> None:
     """
     Trims a log file to a maximum number of lines.
 
@@ -95,7 +95,7 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000):
 
 
 # Instantiating a headless Chrome or Firefox browser
-def setUpWebdriver(run_headless, driver_choice):
+def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdriver:
     """
     Sets up a Chrome or Firefox browser.
 
@@ -127,7 +127,9 @@ def setUpWebdriver(run_headless, driver_choice):
     return driver
 
 
-def userIsPresent(driver, email):
+def userIsPresent(driver: webdriver, email: str) -> bool:
+    """Checks to see if user is already on course team. Returns boolean."""
+
     is_admin_xpath = "//a[text()='" + email + "']"
     user_present = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(user_present) > 0:
@@ -136,7 +138,8 @@ def userIsPresent(driver, email):
         return False
 
 
-def userIsStaff(driver, email):
+def userIsStaff(driver: webdriver, email: str) -> bool:
+    """Checks to see if user is staff. Returns boolean."""
     staff_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-staff"
     staff_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
     if len(staff_flag) > 0:
@@ -145,8 +148,12 @@ def userIsStaff(driver, email):
         return False
 
 
-def userIsAdmin(driver, email):
-
+def userIsAdmin(driver: webdriver) -> bool:
+    """
+    Checks to see whether the user we're signed in as is admin.
+    If not, we can't do anything - you need to be admin to make changes.
+    Returns boolean.
+    """
     # Structure:
     # <span class="badge-current-user bg-primary-700 text-light-100 badge badge-primary">
     #   Admin
@@ -170,7 +177,10 @@ def userIsAdmin(driver, email):
         return False
 
 
-def getAllUsers(driver):
+def getAllUsers(driver: webdriver) -> dict:
+    """
+    Returns a dictionary with two lists of e-mail addresses: staff and admin.
+    """
     staff_list = []
     admin_list = []
 
@@ -187,11 +197,15 @@ def getAllUsers(driver):
     return {"staff": staff_list, "admin": admin_list}
 
 
-# Returns info about the dialog.
-# If there was none, it's "no_dialog"
-# If we closed it and they weren't a user, it's "no_user"
-# If we couldn't close the dialog, it's "failed_to_close"
-def closeErrorDialog(driver):
+def closeErrorDialog(driver: webdriver) -> dict:
+    """
+    Closes error dialogs on the course staff page. Can't go on without that.
+
+    Returns info about the dialog.
+        If there was none, it's "no_dialog"
+        If we closed it and they weren't a user, it's "no_user"
+        If we couldn't close the dialog, it's "failed_to_close"
+    """
 
     # Try to find the "ok" button for the error dialogs.
     wrong_email_css = "#prompt-error.is-shown button.action-primary"
@@ -215,7 +229,8 @@ def closeErrorDialog(driver):
         return {"reason": "no_dialog"}
 
 
-def signIn(driver, username, password):
+def signIn(driver: webdriver, username: str, password: str) -> None:
+    """Signs into edx.org"""
     # Locations
     login_page = "https://authn.edx.org/login"
     username_input_css = "#emailOrUsername"
@@ -301,7 +316,8 @@ def signIn(driver, username, password):
     sys.exit("Login issue or course dashboard page timed out.")
 
 
-def addStaff(driver, email_list):
+def addStaff(driver: webdriver, email_list: list[str]) -> None:
+    """Adds a list of users as course staff via e-mail address. You can promote them to admin later."""
 
     # Locations for add-staff inputs
     new_team_xpath = "//button[text()='New team member']"
@@ -364,7 +380,8 @@ def addStaff(driver, email_list):
     return
 
 
-def promoteStaff(driver, email_list):
+def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
+    """Promotes a list of staff users to admin."""
 
     # For each address:
     for email in email_list:
@@ -429,7 +446,11 @@ def promoteStaff(driver, email_list):
     return
 
 
-def removeStaff(driver, email_list):
+def removeStaff(driver: webdriver, email_list: list[str]) -> None:
+    """
+    Removes a list of users from the course staff.
+    If they're admin you have to demote them first.
+    """
 
     confirm_removal_xpath = "//div[@class='pgn__modal-footer']//button[text()='Delete']"
 
@@ -492,7 +513,8 @@ def removeStaff(driver, email_list):
     return
 
 
-def demoteStaff(driver, email_list):
+def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
+    """Demotes a list of admin users to staff."""
 
     # For each address:
     for email in email_list:
