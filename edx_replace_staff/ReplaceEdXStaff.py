@@ -216,8 +216,9 @@ def signIn(driver: webdriver, username: str, password: str) -> None:
 
 def userIsPresent(driver: webdriver, email: str) -> bool:
     """Checks to see if user is already on course team. Returns boolean."""
+    log("Checking for " + email)
 
-    is_admin_xpath = "//a[text()='" + email + "']"
+    is_admin_xpath = "//a[text()='" + email.lower() + "']"
     user_present = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(user_present) > 0:
         return True
@@ -239,7 +240,7 @@ def userIsStaff(driver: webdriver, email: str) -> bool:
         return False
 
 
-def userIsAdmin(driver: webdriver) -> bool:
+def userIsAdmin(driver: webdriver, email: str) -> bool:
     """
     Checks to see whether the user we're signed in as is admin.
     If not, we can't do anything - you need to be admin to make changes.
@@ -257,8 +258,9 @@ def userIsAdmin(driver: webdriver) -> bool:
     is_admin_xpath = (
         "//span[contains(@class, 'badge-current-user')]"
         + "[contains(text(), 'Admin')]"
-        + "//span[contains(@class, 'badge-current-user')]"
-        + "[contains(text(), 'You!')]"
+        + "//following-sibling::a[contains(@href, '"
+        + email.lower()
+        + "')]"
     )
 
     admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
@@ -294,6 +296,8 @@ def closeErrorDialog(driver: webdriver) -> dict:
         If we couldn't close the dialog, it's "failed_to_close"
     """
 
+    log("Checking for error dialog")
+
     # Try to find the "ok" button for the error dialogs.
     wrong_email_css = "div[aria-label='Error adding user'] button"
     wrong_email_ok_button = driver.find_elements(By.CSS_SELECTOR, wrong_email_css)
@@ -313,6 +317,7 @@ def closeErrorDialog(driver: webdriver) -> dict:
     # If there's no error dialog, we were successful. Move on.
     else:
         # No error dialog
+        log("no error dialog")
         return {"reason": "no_dialog"}
 
 
@@ -401,14 +406,11 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
 
         # Find the "Add admin access" button for this user.
         promotion_xpath = (
-            "//div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-info')]"
-            + "//a[text()='"
-            + email
-            + "']"
-            + "/ancestor::div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-actions')]"
-            + "//button[text()='Add admin access']"
+            "//a[contains(@href, '"
+            + email.lower()
+            + "')]/ancestor::div[contains(@class, 'member-info')]"
+            + "//following-sibling::div[contains(@class, 'member-actions')]"
+            + "//button[contains(text(), 'Add admin access')]"
         )
 
         if userIsStaff(driver, email):
@@ -425,6 +427,7 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
                         "WARNING",
                     )
                     continue
+                log(str(promotion_button))
                 try:
                     promotion_button[0].click()
                     success = True
@@ -433,7 +436,7 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
                     # log(repr(e), "DEBUG")
                     log("Couldn't click promotion button. Trying again...")
         else:
-            if userIsAdmin(driver):
+            if userIsAdmin(driver, email):
                 log(email + " is already admin.")
             else:
                 log(email + " is not in this course. Add them before promoting them.")
@@ -481,7 +484,7 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
             "//div[contains(@class, 'course-team-member')]"
             + "//div[contains(@class, 'member-info')]"
             + "//a[text()='"
-            + email
+            + email.lower()
             + "']"
             + "/ancestor::div[contains(@class, 'course-team-member')]"
             + "//div[contains(@class, 'member-actions')]"
@@ -536,17 +539,14 @@ def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
 
         # Find the delete button for this user.
         demotion_xpath = (
-            "//div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-info')]"
-            + "//a[text()='"
-            + email
-            + "']"
-            + "/ancestor::div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-actions')]"
-            + "//button[text()='Remove admin access']"
+            "//a[contains(@href, '"
+            + email.lower()
+            + "')]/ancestor::div[contains(@class, 'member-info')]"
+            + "//following-sibling::div[contains(@class, 'member-actions')]"
+            + "//button[contains(text(), 'Remove admin access')]"
         )
 
-        if userIsAdmin(driver):
+        if userIsAdmin(driver, email):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
@@ -560,6 +560,7 @@ def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
                         "WARNING",
                     )
                     continue
+                log(str(demotion_button))
                 try:
                     demotion_button[0].click()
                     success = True
@@ -712,7 +713,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # Check to make sure we have the ability to change user status.
-            if not userIsAdmin(driver):
+            if not userIsAdmin(driver, username):
                 log("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
