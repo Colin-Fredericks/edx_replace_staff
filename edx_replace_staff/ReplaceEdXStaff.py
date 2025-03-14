@@ -106,14 +106,24 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
 
+    # Check to make sure the repo is in the right place. If not, prompt for it.
+    repo_path = os.getcwd() + "/Documents/GitHub/edx_replace_staff/"
+    if not os.path.exists(repo_path):
+        prompt = (
+            "The edx_replace_staff repo is not in its usual location.\n"
+            + "Please enter the full path to the repo, starting from your root directory: "
+        )
+        repo_path = input(prompt)
+        if not os.path.exists(repo_path):
+            sys.exit("Cannot proceed. The path you entered does not exist.")
+
     if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
         if run_headless:
             op.add_argument("--headless")
         service = webdriver.ChromeService(
-            executable_path=os.getcwd()
-            + "/Documents/GitHub/edx_replace_staff/edx_replace_staff/chromedriver",
+            executable_path=os.path.join(repo_path, "edx_replace_staff/chromedriver")
         )
         driver = webdriver.Chrome(options=op)
     else:
@@ -121,14 +131,10 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
         op.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
         if run_headless:
             op.add_argument("-headless")
-        # driver = webdriver.Firefox(options=op)
         service = webdriver.FirefoxService(
-            executable_path=os.getcwd()
-            + "Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver",
+            executable_path=os.path.join(repo_path, "edx_replace_staff/geckodriver")
         )
-        driver = webdriver.Firefox(
-            options=op,
-        )
+        driver = webdriver.Firefox(options=op)
 
     driver.implicitly_wait(1)
     return driver
