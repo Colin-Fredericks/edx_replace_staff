@@ -120,6 +120,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
     if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
+        op.timeouts = {"implicit": 1000}
         if run_headless:
             op.add_argument("--headless")
         service = webdriver.ChromeService(
@@ -129,6 +130,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
     else:
         op = FirefoxOptions()
         op.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
+        op.timeouts = {"implicit": 1000}
         if run_headless:
             op.add_argument("-headless")
         service = webdriver.FirefoxService(
