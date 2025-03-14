@@ -744,8 +744,8 @@ the script is to run. Press control-C to cancel.
             jobs = {
                 "Add": addStaff,
                 "Promote": promoteStaff,
-                "Remove": removeStaff,
                 "Demote": demoteStaff,
+                "Remove": removeStaff,
             }
             for j in jobs:
                 if each_row[j] is None:
