@@ -11,12 +11,12 @@ import argparse
 import traceback
 from getpass import getpass
 from selenium import webdriver
-from selenium.webdriver import ActionChains
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -95,7 +95,7 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000) -> None:
 
 
 # Instantiating a headless Chrome or Firefox browser
-def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdriver:
+def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDriver:
     """
     Sets up a Chrome or Firefox browser.
 
@@ -111,15 +111,22 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdri
         op.add_argument("start-maximized")
         if run_headless:
             op.add_argument("--headless")
+        service = webdriver.ChromeService(
+            executable_path=os.getcwd()
+            + "/Documents/GitHub/edx_replace_staff/edx_replace_staff/chromedriver",
+        )
         driver = webdriver.Chrome(options=op)
     else:
         op = FirefoxOptions()
         op.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
         if run_headless:
-            op.headless = True
+            op.add_argument("-headless")
         # driver = webdriver.Firefox(options=op)
+        service = webdriver.FirefoxService(
+            executable_path=os.getcwd()
+            + "Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver",
+        )
         driver = webdriver.Firefox(
-            executable_path="/Users/colinfredericks/Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver",
             options=op,
         )
 
@@ -127,7 +134,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdri
     return driver
 
 
-def signIn(driver: webdriver, username: str, password: str) -> None:
+def signIn(driver: WebDriver, username: str, password: str) -> None:
     """Signs into edx.org"""
     # Locations
     login_page = "https://authn.edx.org/login"
@@ -189,7 +196,7 @@ def signIn(driver: webdriver, username: str, password: str) -> None:
             selenium_exceptions.TimeoutException,
             selenium_exceptions.InvalidSessionIdException,
         ):
-            log(traceback.print_exc(), "WARNING")
+            log(str(traceback.print_exc()), "WARNING")
             login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
             if len(login_fail) > 0:
                 log("Incorrect login or password")
@@ -214,7 +221,7 @@ def signIn(driver: webdriver, username: str, password: str) -> None:
     sys.exit("Login issue or course dashboard page timed out.")
 
 
-def userIsPresent(driver: webdriver, email: str) -> bool:
+def userIsPresent(driver: WebDriver, email: str) -> bool:
     """Checks to see if user is already on course team. Returns boolean."""
     log("Checking for " + email)
 
@@ -226,7 +233,7 @@ def userIsPresent(driver: webdriver, email: str) -> bool:
         return False
 
 
-def userIsStaff(driver: webdriver, email: str) -> bool:
+def userIsStaff(driver: WebDriver, email: str) -> bool:
     """Checks to see if user is staff. Returns boolean."""
     staff_user_xpath = (
         "//span[contains(@class, 'badge-current-user') and contains(text(), '"
@@ -240,7 +247,7 @@ def userIsStaff(driver: webdriver, email: str) -> bool:
         return False
 
 
-def userIsAdmin(driver: webdriver, email: str) -> bool:
+def userIsAdmin(driver: WebDriver, email: str) -> bool:
     """
     Checks to see whether the user we're signed in as is admin.
     If not, we can't do anything - you need to be admin to make changes.
@@ -270,7 +277,7 @@ def userIsAdmin(driver: webdriver, email: str) -> bool:
         return False
 
 
-def getAllUsers(driver: webdriver) -> dict:
+def getAllUsers(driver: WebDriver) -> dict:
     """
     Returns a dictionary with two lists of e-mail addresses: staff and admin.
     """
@@ -286,7 +293,7 @@ def getAllUsers(driver: webdriver) -> dict:
     return {"staff": staff_list, "admin": admin_list}
 
 
-def closeErrorDialog(driver: webdriver) -> dict:
+def closeErrorDialog(driver: WebDriver) -> dict:
     """
     Closes error dialogs on the course staff page. Can't go on without that.
 
@@ -321,7 +328,7 @@ def closeErrorDialog(driver: webdriver) -> dict:
         return {"reason": "no_dialog"}
 
 
-def addStaff(driver: webdriver, email_list: list[str]) -> None:
+def addStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Adds a list of users as course staff via e-mail address. You can promote them to admin later."""
 
     # Locations for add-staff inputs
@@ -385,7 +392,7 @@ def addStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
+def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Promotes a list of staff users to admin."""
 
     # For each address:
@@ -449,7 +456,7 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def removeStaff(driver: webdriver, email_list: list[str]) -> None:
+def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
     """
     Removes a list of users from the course staff.
     If they're admin you have to demote them first.
@@ -519,7 +526,7 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
+def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Demotes a list of admin users to staff."""
 
     # For each address:
