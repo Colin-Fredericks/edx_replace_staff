@@ -251,8 +251,10 @@ def userIsStaff(driver: WebDriver, email: str) -> bool:
     )
     staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
     if len(staff_flag) > 0:
+        log(email + " is staff.")
         return True
     else:
+        log(email + " is not staff.")
         return False
 
 
@@ -262,13 +264,6 @@ def userIsAdmin(driver: WebDriver, email: str) -> bool:
     If not, we can't do anything - you need to be admin to make changes.
     Returns boolean.
     """
-    # Structure:
-    # <span class="badge-current-user bg-primary-700 text-light-100 badge badge-primary">
-    #   Admin
-    #   <span class="badge-current-user x-small text-light-500">
-    #     You!
-    #   </span>
-    # </span>
 
     # Xpath to find the admin flag for this user.
     is_admin_xpath = (
@@ -281,8 +276,10 @@ def userIsAdmin(driver: WebDriver, email: str) -> bool:
 
     admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(admin_flag) > 0:
+        log(email + " is admin.")
         return True
     else:
+        log(email + " is not admin.")
         return False
 
 
@@ -323,16 +320,20 @@ def closeErrorDialog(driver: WebDriver) -> dict:
         wrong_email_ok_button = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, wrong_email_css))
         )
-        log(str(wrong_email_ok_button))
+        if wrong_email_ok_button is None:
+            log("No error dialog found.")
+            return {"reason": "no_dialog"}
+        else:
+            log("Error dialog found.")
     except Exception as e:
         # If there was no error dialog, we can move on.
         # log(str(e))
         log("No error dialog found.")
         return {"reason": "no_dialog"}
 
-    log("error dialog open")
     try:
-        # No user with specified e-mail address.
+        # No user with specified e-mail address. 
+        # (At least, that's the only current error shown.)
         wrong_email_ok_button.click()
         return {"reason": "no_user"}
     except Exception as e:
@@ -351,8 +352,11 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
     new_staff_email_xpath = "//input[@name='email']"
     add_user_xpath = "//button[text()='Add user']"
 
+    log("Adding staff to " + driver.title)
+
     # For each address:
     for email in email_list:
+        log("Adding " + email)
 
         # If the user is already present, move to the next e-mail address.
         if userIsPresent(driver, email):
@@ -364,12 +368,12 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
         # Retry up to 3 times.
         success = False
         for x in range(0, 3):
-            log("Trying to add " + email)
 
             try:
                 # Click the "New Team Member" button
                 new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
                 new_team_buttons[0].click()
+                log("Clicked 'New Team Member'")
             except Exception as e:
                 # If that failed, there could be an error message up. Try to close it.
                 closeErrorDialog(driver)
@@ -400,7 +404,7 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
                 # log(repr(e), "DEBUG")
 
         if success:
-            log("Added " + email)
+            log("Successfully added " + email)
         else:
             log("Could not add " + email)
             closeErrorDialog(driver)
@@ -413,19 +417,9 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
 
     # For each address:
     for email in email_list:
+        log("Promoting " + email)
 
         success = False
-
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Add admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
 
         # Find the "Add admin access" button for this user.
         promotion_xpath = (
@@ -440,7 +434,6 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                log("Promoting " + email)
                 try:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(By.XPATH, promotion_xpath)
@@ -478,6 +471,8 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
     If they're admin you have to demote them first.
     """
 
+    log("Removing staff from " + driver.title)
+
     confirm_removal_xpath = (
         "//div[@contains(aria-label, "
         "Delete course team member)]//button[text()='Delete']"
@@ -486,21 +481,12 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
     # For each address:
     for email in email_list:
 
+        log("Removing " + email)
+
         # If this user isn't present, move on to the next one.
         if not userIsPresent(driver, email):
             log(email + " was already not in this course.")
             continue
-
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Add admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
 
         # Find the delete button for this user.
         removal_xpath = (
@@ -545,20 +531,13 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
 def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Demotes a list of admin users to staff."""
 
+    log("Demoting staff in " + driver.title)
+
     # For each address:
     for email in email_list:
+        log("Demoting " + email)
 
         success = False
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Remove admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
 
         # Find the delete button for this user.
         demotion_xpath = (
@@ -573,7 +552,6 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                log("Demoting " + email)
                 try:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(By.XPATH, demotion_xpath)
