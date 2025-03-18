@@ -52,27 +52,17 @@ Options:
 # Prep the logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = logging.FileHandler("edx_staffing.log")
 formatter = logging.Formatter(
-    "%(asctime)s : %(name)s  : %(funcName)s : %(levelname)s : %(message)s"
+    "%(asctime)s : %(funcName)s : %(levelname)s : %(message)s"
 )
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
+file_handler = logging.FileHandler("edx_staffing.log")
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
-# Just a faster thing to type and read.
-def log(text: str, level="INFO") -> None:
-    print(text)
-    if level == "DEBUG":
-        logger.debug(text)
-    if level == "INFO":
-        logger.info(text)
-    if level == "WARNING":
-        logger.warning(text)
-    if level == "ERROR":
-        logger.error(text)
-    if level == "CRITICAL":
-        logger.critical(text)
+screen_handler = logging.StreamHandler()
+screen_handler.setFormatter(formatter)
+logger.addHandler(screen_handler)
 
 
 def trimLog(log_file="edx_staffing.log", max_lines=20000) -> None:
@@ -103,7 +93,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
     run_headless (bool): Whether to run the browser in headless mode.
     driver_choice (str): Which browser to use. Default is firefox, "chrome" is an option.
     """
-    log("Setting up webdriver.")
+    logger.info("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
 
     # Check to make sure the repo is in the right place. If not, prompt for it.
@@ -150,7 +140,7 @@ def signIn(driver: WebDriver, username: str, password: str) -> None:
     login_button_css = "#sign-in"
 
     # Open the edX sign-in page
-    log("Logging in...")
+    logger.info("Logging in...")
     driver.get(login_page)
 
     # Wait a second.
@@ -174,7 +164,7 @@ def signIn(driver: WebDriver, username: str, password: str) -> None:
         username_field = driver.find_elements(By.CSS_SELECTOR, username_input_css)[0]
         username_field.clear()
         username_field.send_keys(username)
-        log("Username sent")
+        logger.info("Username sent")
 
         # Wait a second.
         time.sleep(1)
@@ -182,7 +172,7 @@ def signIn(driver: WebDriver, username: str, password: str) -> None:
         password_field = driver.find_elements(By.CSS_SELECTOR, password_input_css)[0]
         password_field.clear()
         password_field.send_keys(password)
-        log("Password sent")
+        logger.info("Password sent")
 
         # Wait a second.
         time.sleep(1)
@@ -191,54 +181,54 @@ def signIn(driver: WebDriver, username: str, password: str) -> None:
         login_button = driver.find_elements(By.CSS_SELECTOR, login_button_css)[0]
         actions = ActionChains(driver)
         actions.move_to_element(login_button).click().perform()
-        log("Login button clicked")
+        logger.info("Login button clicked")
 
         # Check to make sure we're signed in.
         # There are several possible fail states to check for.
         found_dashboard = False
         try:
-            log("Finding dashboard...")
+            logger.info("Finding dashboard...")
             found_dashboard = WebDriverWait(driver, 10).until(EC.url_contains("home"))
         except (
             selenium_exceptions.TimeoutException,
             selenium_exceptions.InvalidSessionIdException,
         ):
-            log(str(traceback.print_exc()), "WARNING")
+            logger.debug(str(traceback.print_exc()), "WARNING")
             login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
             if len(login_fail) > 0:
-                log("Incorrect login or password")
+                logger.info("Incorrect login or password")
             need_reset = driver.find_elements(
                 By.CSS_SELECTOR, "#password-security-reset-password"
             )
             if len(need_reset) > 0:
-                log("Password reset required")
+                logger.error("Password reset required")
             if "Forbidden" in driver.title:
-                log("403: Forbidden")
+                logger.error("403: Forbidden")
 
         # If we're logged in, we're done.
         if found_dashboard:
-            log("Logged in.")
+            logger.info("Logged in.")
             return
 
         login_count += 1
-        log("Login attempt count: " + str(login_count))
+        logger.info("Login attempt count: " + str(login_count))
 
     driver.close()
-    log("Login failed.")
+    logger.error("Login failed.")
     sys.exit("Login issue or course dashboard page timed out.")
 
 
 def userIsPresent(driver: WebDriver, email: str) -> bool:
     """Checks to see if user is already on course team. Returns boolean."""
-    log("Is " + email + " present?")
+    logger.debug("Is " + email + " present?")
 
     is_admin_xpath = "//a[text()='" + email.lower() + "']"
     user_present = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(user_present) > 0:
-        log(email + " on the course team.")
+        logger.debug(email + " is on the course team.")
         return True
     else:
-        log(email + " is not on the course team.")
+        logger.debug(email + " is not on the course team.")
         return False
 
 
@@ -252,10 +242,10 @@ def userIsStaff(driver: WebDriver, email: str) -> bool:
     )
     staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
     if len(staff_flag) > 0:
-        log(email + " is staff.")
+        logger.debug(email + " is staff.")
         return True
     else:
-        log(email + " is not staff.")
+        logger.debug(email + " is not staff.")
         return False
 
 
@@ -276,10 +266,10 @@ def userIsAdmin(driver: WebDriver, email: str) -> bool:
 
     admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
     if len(admin_flag) > 0:
-        log(email + " is admin.")
+        logger.debug(email + " is admin.")
         return True
     else:
-        log(email + " is not admin.")
+        logger.debug(email + " is not admin.")
         return False
 
 
@@ -309,26 +299,25 @@ def closeErrorDialog(driver: WebDriver) -> dict:
         If we couldn't close the dialog, it's "failed_to_close"
     """
 
-    log("Checking for error dialog")
+    logger.debug("Checking for error dialog")
 
     # Try to find the "ok" button for the error dialogs.
     wrong_email_css = "div[aria-label='Error adding user'] button"
 
     # If there is an error dialog open, report why, clear it, and move on.
     try:
-        log("Finding error dialog")
+        logger.debug("Finding error dialog")
         wrong_email_ok_button = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, wrong_email_css))
         )
         if wrong_email_ok_button is None:
-            log("No error dialog found.")
+            logger.debug("No error dialog found.")
             return {"reason": "no_dialog"}
         else:
-            log("Error dialog found.")
+            logger.debug("Error dialog found.")
     except Exception as e:
         # If there was no error dialog, we can move on.
-        # log(str(e))
-        log("No error dialog found.")
+        logger.debug("No error dialog found.")
         return {"reason": "no_dialog"}
 
     try:
@@ -338,9 +327,8 @@ def closeErrorDialog(driver: WebDriver) -> dict:
         return {"reason": "no_user"}
     except Exception as e:
         # Couldn't close the error dialog.
-        # log(repr(e), "DEBUG")
-        log("Could not close error dialog for " + driver.title, "WARNING")
-        log(str(e), "DEBUG")
+        logger.warning("Could not close error dialog for " + driver.title)
+        logger.debug(str(e))
         return {"reason": "failed_to_close"}
 
 
@@ -352,18 +340,18 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
     new_staff_email_xpath = "//input[@name='email']"
     add_user_xpath = "//button[text()='Add user']"
 
-    log("Adding staff to " + driver.title)
+    logger.info("Adding staff to " + driver.title)
 
     # For each address:
     for email in email_list:
-        log("Adding " + email)
+        logger.info("Adding " + email)
 
         # If the user is already present, move to the next e-mail address.
         if userIsPresent(driver, email):
-            log(email + " is already on course team.")
+            logger.debug(email + " is already on course team.")
             continue
         else:
-            log(email + " is not on course team yet.")
+            logger.debug(email + " is not on course team yet.")
 
         # Retry up to 3 times.
         success = False
@@ -373,7 +361,7 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
                 # Click the "New Team Member" button
                 new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
                 new_team_buttons[0].click()
-                log("Clicked 'New Team Member'")
+                logger.debug("Clicked 'New Team Member'")
             except Exception as e:
                 # If that failed, there could be an error message up. Try to close it.
                 closeErrorDialog(driver)
@@ -400,13 +388,13 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
             except Exception as e:
                 # If the stuff above failed, it's probably because
                 # one of the elements hasn't been added to the page yet.
-                log("Couldn't add " + email + ", trying again...")
-                # log(repr(e), "DEBUG")
+                logger.warning("Couldn't add " + email + ", trying again...")
+                # logger.debug(repr(e))
 
         if success:
-            log("Successfully added " + email)
+            logger.info("Successfully added " + email)
         else:
-            log("Could not add " + email)
+            logger.info("Could not add " + email)
             closeErrorDialog(driver)
 
     return
@@ -417,7 +405,7 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
 
     # For each address:
     for email in email_list:
-        log("Promoting " + email)
+        logger.info("Promoting " + email)
 
         success = False
 
@@ -438,9 +426,8 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(By.XPATH, promotion_xpath)
                 except:
-                    log(
-                        "No promotion button found. You may not have Admin access. Trying again...",
-                        "WARNING",
+                    logger.warning(
+                        "No promotion button found. You may not have Admin access. Trying again..."
                     )
                     continue
                 try:
@@ -448,18 +435,19 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     success = True
                     break
                 except Exception as e:
-                    # log(repr(e), "DEBUG")
-                    log("Couldn't click promotion button. Trying again...")
+                    logger.debug("Couldn't click promotion button. Trying again...")
         else:
             if userIsAdmin(driver, email):
-                log(email + " is already admin.")
+                logger.debug(email + " is already admin.")
             else:
-                log(email + " is not in this course. Add them before promoting them.")
+                logger.debug(
+                    email + " is not in this course. Add them before promoting them."
+                )
 
         if success:
-            log("Promoted " + email + " to Admin.")
+            logger.info("Promoted " + email + " to Admin.")
         else:
-            log("Could not promote " + email)
+            logger.info("Could not promote " + email)
 
     return
 
@@ -470,18 +458,18 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
     If they're admin you have to demote them first.
     """
 
-    log("Removing staff from " + driver.title)
+    logger.info("Removing staff from " + driver.title)
 
     confirm_removal_xpath = "//div[contains(@aria-label, 'Delete course team member')]//button[text()='Delete']"
 
     # For each address:
     for email in email_list:
 
-        log("Removing " + email)
+        logger.debug("Removing " + email)
 
         # If this user isn't present, move on to the next one.
         if not userIsPresent(driver, email):
-            log(email + " was already not in this course.")
+            logger.debug(email + " was already not in this course.")
             continue
 
         # Find the delete button for this user.
@@ -505,7 +493,7 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
                 # Click the trash can ("remove user" button)
                 remove_button[0].click()
                 # Click the "confirm" button.
-                log("Trying to remove " + email)
+                logger.debug("Trying to remove " + email)
                 confirm_button = WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.XPATH, confirm_removal_xpath))
                 )
@@ -514,14 +502,14 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
                 break
 
             except Exception as e:
-                # log(repr(e), "DEBUG")
+                # logger.debug(repr(e))
                 # Keep trying up to 3 times.
-                log("Trying again...")
+                logger.debug("Trying again...")
 
         if success:
-            log("Removed " + email)
+            logger.info("Removed " + email)
         else:
-            log("Could not remove " + email)
+            logger.info("Could not remove " + email)
 
     return
 
@@ -529,11 +517,11 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
 def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Demotes a list of admin users to staff."""
 
-    log("Demoting staff in " + driver.title)
+    logger.info("Demoting staff in " + driver.title)
 
     # For each address:
     for email in email_list:
-        log("Demoting " + email)
+        logger.debug("Demoting " + email)
 
         success = False
 
@@ -554,9 +542,8 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(By.XPATH, demotion_xpath)
                 except:
-                    log(
-                        "Couldn't find demotion button. You may not have Admin access. Trying again...",
-                        "WARNING",
+                    logger.warning(
+                        "Couldn't find demotion button. You may not have Admin access. Trying again..."
                     )
                     continue
                 try:
@@ -564,18 +551,17 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     success = True
                     break
                 except Exception as e:
-                    # log(repr(e), "DEBUG")
-                    log("Couldn't click demotion button. Trying again...")
+                    logger.debug("Couldn't click demotion button. Trying again...")
         else:
             if userIsStaff(driver, email):
-                log(email + " is already staff.")
+                logger.debug(email + " is already staff.")
             else:
-                log(email + " is not in this course.")
+                logger.debug(email + " is not in this course.")
 
         if success:
-            log("Demoted " + email + " to staff.")
+            logger.info("Demoted " + email + " to staff.")
         else:
-            log("Could not demote " + email)
+            logger.info("Could not demote " + email)
 
     return
 
@@ -616,7 +602,7 @@ def ReplaceEdXStaff():
 
     driver_choice = "firefox"
     if args.chrome:
-        log("Using Chrome instead of Firefox.")
+        logger.info("Using Chrome instead of Firefox.")
         driver_choice = "chrome"
 
     if not os.path.exists(args.csvfile):
@@ -649,63 +635,29 @@ the script is to run. Press control-C to cancel.
             EC.presence_of_element_located((By.ID, "pgn-searchfield-input-1"))
         )
     except selenium_exceptions.TimeoutException:
-        log("Studio page load timed out.", "CRITICAL")
+        logger.error("Studio page load timed out.")
         driver.quit()
         sys.exit("Studio page load timed out.")
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
 
-        log("Opening csv file.")
+        logger.info("Opening csv file.")
         reader = csv.DictReader(file)
 
         # For each line in the CSV...
         for each_row in reader:
-            # log("Processing line:", "DEBUG")
-            # log(each_row, "DEBUG")
+            # logger.debug("Processing line:")
+            # logger.debug(each_row)
 
             if each_row["URL"] == "":
                 continue
 
             # Skip CS50 courses unless we've specifically asked to include them.
             if "cs50" in each_row["URL"].lower() and not args.cs50:
-                log("Skipping CS50 course " + each_row["URL"])
+                logger.info("Skipping CS50 course " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
-
-            """
-            # This was perhaps not the right thing; still uncertain.
-            # Because of reasons, we have to open the course outline page
-            # and CLICK to the course team page from there.
-            course_outline_page = (
-                str(each_row["URL"]).strip().replace("course_team", "")
-            )
-            driver.get(course_outline_page)
-
-            # When the #Settings-dropdown-menu is present, we're good to move on.
-            course_outline_css = ".course-outline-section"
-            try:
-                log("Finding course outline page...")
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, course_outline_css)
-                    )
-                )
-            except selenium_exceptions.TimeoutException:
-                log("Outline timed out. Skipping course " + each_row["URL"])
-                skipped_classes.append(each_row)
-                continue
-
-
-            # Click the "Settings" button.
-            settings_menu_css = "#Settings-dropdown-menu"
-            course_team_link = driver.find_element(By.CSS_SELECTOR, settings_menu_css)
-            course_team_link.click()
-            # Click the "Course Team" link on the resulting dropdown menu.
-            course_team_xpath = "//a[contains(text(), 'Course Team')]"
-            course_team_link = driver.find_element(By.XPATH, course_team_xpath)
-            course_team_link.click()"
-            """
 
             driver.get(each_row["URL"].strip())
             num_classes += 1
@@ -720,31 +672,30 @@ the script is to run. Press control-C to cancel.
                 )
                 timeouts = 0
             except Exception as e:
-                # log(repr(e), "DEBUG")
+                # logger.debug(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
                 if "Dashboard" in driver.title:
-                    log("Course Team page load timed out for " + each_row["URL"])
+                    logger.warning(
+                        "Course Team page load timed out for " + each_row["URL"]
+                    )
                     skipped_classes.append(each_row)
                     timeouts += 1
                     if timeouts >= too_many_timeouts:
-                        log(
-                            str(too_many_timeouts)
-                            + " course pages timed out in a row.",
-                            "WARNING",
+                        logger.warning(
+                            str(too_many_timeouts) + " course pages timed out in a row."
                         )
-                        log(
-                            "Check URLs and internet connectivity and try again.",
-                            "WARNING",
+                        logger.warning(
+                            "Check URLs and internet connectivity and try again."
                         )
                         break
                 continue
 
             # If we only need to get users and status, we can do that easier.
             if args.list:
-                log("Getting staff for " + each_row["URL"])
+                logger.info("Getting staff for " + each_row["URL"])
                 user_list = getAllUsers(driver)
-                # log(user_list)
+                # logger.debug(user_list)
                 this_class = {
                     "Course": each_row["Course"],
                     "URL": each_row["URL"],
@@ -756,17 +707,17 @@ the script is to run. Press control-C to cancel.
 
             # Check to make sure we have the ability to change user status.
             if not userIsAdmin(driver, username.lower()):
-                log("\nUser is not admin in " + each_row["URL"])
+                logger.warning("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
 
             if "Course team" not in driver.title or "Forbidden" in driver.title:
-                log("\nCould not open course " + each_row["URL"])
+                logger.warning("\nCould not open course " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
 
-            log("\n" + driver.title)
-            log(each_row["URL"])
+            logger.info("\n" + driver.title)
+            logger.info(each_row["URL"])
             # Functions to call for each task. As of Python 3.6 they'll stay in this order.
             jobs = {
                 "Add": addStaff,
@@ -777,7 +728,7 @@ the script is to run. Press control-C to cancel.
             for j in jobs:
                 if each_row[j] is None:
                     driver.quit()
-                    log("CSV error - might be missing a column.", "CRITICAL")
+                    logger.error("CSV error - might be missing a column.")
                     continue
                 # Taking out whitespace.
                 # Split e-mail list on spaces and throw out blank elements.
@@ -795,7 +746,7 @@ the script is to run. Press control-C to cancel.
 
         # In list mode, save a CSV with our course staff.
         if args.list:
-            log(
+            logger.info(
                 "See course_staffing.csv for a full list of course staff and administrators."
             )
             with open("course_staffing.csv", "w", newline="") as all_staff:
@@ -808,7 +759,9 @@ the script is to run. Press control-C to cancel.
         # Write out a new csv with the ones we couldn't do.
         else:
             if len(skipped_classes) > 0:
-                log("See remaining_courses.csv for courses that had to be skipped.")
+                logger.info(
+                    "See remaining_courses.csv for courses that had to be skipped."
+                )
                 with open(
                     "remaining_courses.csv", "w", newline=""
                 ) as remaining_courses:
@@ -821,9 +774,9 @@ the script is to run. Press control-C to cancel.
                     for x in skipped_classes:
                         writer.writerow(x)
 
-        log("Processed " + str(num_classes - len(skipped_classes)) + " courses")
+        logger.info("Processed " + str(num_classes - len(skipped_classes)) + " courses")
         end_time = datetime.datetime.now()
-        log("in " + str(end_time - start_time).split(".")[0])
+        logger.info("in " + str(end_time - start_time).split(".")[0])
 
     # Done.
 
