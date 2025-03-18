@@ -245,9 +245,10 @@ def userIsPresent(driver: WebDriver, email: str) -> bool:
 def userIsStaff(driver: WebDriver, email: str) -> bool:
     """Checks to see if user is staff. Returns boolean."""
     staff_user_xpath = (
-        "//span[contains(@class, 'badge-current-user') and contains(text(), '"
+        "//span[contains(@class, 'badge-current-user') and contains(text(), 'Staff')]"
+        + "//following-sibling::a[contains(@href, '"
         + email.lower()
-        + "' )]/ancestor::div[contains(@class, 'member-info')]"
+        + "')]"
     )
     staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
     if len(staff_flag) > 0:
@@ -267,8 +268,7 @@ def userIsAdmin(driver: WebDriver, email: str) -> bool:
 
     # Xpath to find the admin flag for this user.
     is_admin_xpath = (
-        "//span[contains(@class, 'badge-current-user')]"
-        + "[contains(text(), 'Admin')]"
+        "//span[contains(@class, 'badge-current-user') and contains(text(), 'Admin')]"
         + "//following-sibling::a[contains(@href, '"
         + email.lower()
         + "')]"
@@ -332,7 +332,7 @@ def closeErrorDialog(driver: WebDriver) -> dict:
         return {"reason": "no_dialog"}
 
     try:
-        # No user with specified e-mail address. 
+        # No user with specified e-mail address.
         # (At least, that's the only current error shown.)
         wrong_email_ok_button.click()
         return {"reason": "no_user"}
@@ -443,7 +443,6 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                         "WARNING",
                     )
                     continue
-                log(str(promotion_button))
                 try:
                     promotion_button[0].click()
                     success = True
@@ -473,10 +472,7 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
 
     log("Removing staff from " + driver.title)
 
-    confirm_removal_xpath = (
-        "//div[@contains(aria-label, "
-        "Delete course team member)]//button[text()='Delete']"
-    )
+    confirm_removal_xpath = "//div[contains(@aria-label, 'Delete course team member')]//button[text()='Delete']"
 
     # For each address:
     for email in email_list:
@@ -510,8 +506,10 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
                 remove_button[0].click()
                 # Click the "confirm" button.
                 log("Trying to remove " + email)
-                confirm_button = driver.find_elements(By.XPATH, confirm_removal_xpath)
-                confirm_button[0].click()
+                confirm_button = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, confirm_removal_xpath))
+                )
+                confirm_button.click()
                 success = True
                 break
 
@@ -561,7 +559,6 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                         "WARNING",
                     )
                     continue
-                log(str(demotion_button))
                 try:
                     demotion_button[0].click()
                     success = True
@@ -593,10 +590,8 @@ def ReplaceEdXStaff():
     trimLog()
 
     num_classes = 0
-    num_classes_fixed = 0
     skipped_classes = []
     staffed_classes = []
-    unfound_addresses = []
     run_headless = True
     timeouts = 0
     too_many_timeouts = 3
@@ -645,6 +640,19 @@ the script is to run. Press control-C to cancel.
     driver = setUpWebdriver(run_headless, driver_choice)
     signIn(driver, username, password)
 
+    # We have to open the Studio outline in order to avoid CORS issues for some reason.
+    driver.get("https://studio.edx.org/home")
+    # This redirects to https://course-authoring.edx.org/home , but we actually want to get the redirect!
+    # When the input with id pgn-searchfield-input-1 shows up we're good to continue.
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "pgn-searchfield-input-1"))
+        )
+    except selenium_exceptions.TimeoutException:
+        log("Studio page load timed out.", "CRITICAL")
+        driver.quit()
+        sys.exit("Studio page load timed out.")
+
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
 
@@ -665,6 +673,8 @@ the script is to run. Press control-C to cancel.
                 skipped_classes.append(each_row)
                 continue
 
+            """
+            # This was perhaps not the right thing; still uncertain.
             # Because of reasons, we have to open the course outline page
             # and CLICK to the course team page from there.
             course_outline_page = (
@@ -686,6 +696,7 @@ the script is to run. Press control-C to cancel.
                 skipped_classes.append(each_row)
                 continue
 
+
             # Click the "Settings" button.
             settings_menu_css = "#Settings-dropdown-menu"
             course_team_link = driver.find_element(By.CSS_SELECTOR, settings_menu_css)
@@ -693,8 +704,10 @@ the script is to run. Press control-C to cancel.
             # Click the "Course Team" link on the resulting dropdown menu.
             course_team_xpath = "//a[contains(text(), 'Course Team')]"
             course_team_link = driver.find_element(By.XPATH, course_team_xpath)
-            course_team_link.click()
+            course_team_link.click()"
+            """
 
+            driver.get(each_row["URL"].strip())
             num_classes += 1
 
             # Check to make sure we've opened a new page.
@@ -742,7 +755,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # Check to make sure we have the ability to change user status.
-            if not userIsAdmin(driver, username):
+            if not userIsAdmin(driver, username.lower()):
                 log("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
