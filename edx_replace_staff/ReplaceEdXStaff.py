@@ -11,12 +11,12 @@ import argparse
 import traceback
 from getpass import getpass
 from selenium import webdriver
-from selenium.webdriver import ActionChains
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -95,7 +95,7 @@ def trimLog(log_file="edx_staffing.log", max_lines=20000) -> None:
 
 
 # Instantiating a headless Chrome or Firefox browser
-def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdriver:
+def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDriver:
     """
     Sets up a Chrome or Firefox browser.
 
@@ -106,130 +106,42 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> webdri
     log("Setting up webdriver.")
     os.environ["PATH"] = os.environ["PATH"] + os.pathsep + os.path.dirname(__file__)
 
+    # Check to make sure the repo is in the right place. If not, prompt for it.
+    repo_path = "/Users/" + os.getlogin() + "/Documents/GitHub/edx_replace_staff/"
+    if not os.path.exists(repo_path):
+        prompt = (
+            "The edx_replace_staff repo is not in its usual location.\n"
+            + "Please enter the full path to the repo, starting from your root directory: "
+        )
+        repo_path = input(prompt)
+        if not os.path.exists(repo_path):
+            sys.exit("Cannot proceed. The path you entered does not exist.")
+
     if driver_choice == "chrome":
         op = ChromeOptions()
         op.add_argument("start-maximized")
+        op.timeouts = {"implicit": 1000}
         if run_headless:
             op.add_argument("--headless")
+        service = webdriver.ChromeService(
+            executable_path=os.path.join(repo_path, "edx_replace_staff/chromedriver")
+        )
         driver = webdriver.Chrome(options=op)
     else:
         op = FirefoxOptions()
         op.binary_location = "/Applications/Firefox.app/Contents/MacOS/firefox"
+        op.timeouts = {"implicit": 1000}
         if run_headless:
-            op.headless = True
-        # driver = webdriver.Firefox(options=op)
-        driver = webdriver.Firefox(
-            executable_path="/Users/colinfredericks/Documents/GitHub/edx_replace_staff/edx_replace_staff/geckodriver",
-            options=op,
+            op.add_argument("-headless")
+        service = webdriver.FirefoxService(
+            executable_path=os.path.join(repo_path, "edx_replace_staff/geckodriver")
         )
+        driver = webdriver.Firefox(options=op)
 
-    driver.implicitly_wait(1)
     return driver
 
 
-def userIsPresent(driver: webdriver, email: str) -> bool:
-    """Checks to see if user is already on course team. Returns boolean."""
-
-    is_admin_xpath = "//a[text()='" + email + "']"
-    user_present = driver.find_elements(By.XPATH, is_admin_xpath)
-    if len(user_present) > 0:
-        return True
-    else:
-        return False
-
-
-def userIsStaff(driver: webdriver, email: str) -> bool:
-    """Checks to see if user is staff. Returns boolean."""
-    staff_user_css = "li[data-email='" + email.lower() + "'] span.flag-role-staff"
-    staff_flag = driver.find_elements(By.CSS_SELECTOR, staff_user_css)
-    if len(staff_flag) > 0:
-        return True
-    else:
-        return False
-
-
-def userIsAdmin(driver: webdriver) -> bool:
-    """
-    Checks to see whether the user we're signed in as is admin.
-    If not, we can't do anything - you need to be admin to make changes.
-    Returns boolean.
-    """
-    # Structure:
-    # <span class="badge-current-user bg-primary-700 text-light-100 badge badge-primary">
-    #   Admin
-    #   <span class="badge-current-user x-small text-light-500">
-    #     You!
-    #   </span>
-    # </span>
-
-    # Xpath to find the admin flag for this user.
-    is_admin_xpath = (
-        "//span[contains(@class, 'badge-current-user')]"
-        + "[contains(text(), 'Admin')]"
-        + "//span[contains(@class, 'badge-current-user')]"
-        + "[contains(text(), 'You!')]"
-    )
-
-    admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
-    if len(admin_flag) > 0:
-        return True
-    else:
-        return False
-
-
-def getAllUsers(driver: webdriver) -> dict:
-    """
-    Returns a dictionary with two lists of e-mail addresses: staff and admin.
-    """
-    staff_list = []
-    admin_list = []
-
-    staff_xpath = "//span[contains(@class, 'flag-role-staff')]/ancestor::li"
-    admin_xpath = "//span[contains(@class, 'flag-role-instructor')]/ancestor::li"
-
-    all_staff = driver.find_elements(By.XPATH, staff_xpath)
-    for x in all_staff:
-        staff_list.append(x.get_attribute("data-email"))
-    all_admins = driver.find_elements(By.XPATH, admin_xpath)
-    for y in all_admins:
-        admin_list.append(y.get_attribute("data-email"))
-
-    return {"staff": staff_list, "admin": admin_list}
-
-
-def closeErrorDialog(driver: webdriver) -> dict:
-    """
-    Closes error dialogs on the course staff page. Can't go on without that.
-
-    Returns info about the dialog.
-        If there was none, it's "no_dialog"
-        If we closed it and they weren't a user, it's "no_user"
-        If we couldn't close the dialog, it's "failed_to_close"
-    """
-
-    # Try to find the "ok" button for the error dialogs.
-    wrong_email_css = "#prompt-error.is-shown button.action-primary"
-    wrong_email_ok_button = driver.find_elements(By.CSS_SELECTOR, wrong_email_css)
-
-    # If there is an error dialog open, report why, clear it, and move on.
-    if len(wrong_email_ok_button) > 0:
-        log("error dialog open")
-        try:
-            # No user with specified e-mail address.
-            wrong_email_ok_button[0].click()
-            return {"reason": "no_user"}
-        except Exception as e:
-            # Couldn't close the error dialog.
-            # log(repr(e), "DEBUG")
-            log("Could not close error dialog for " + driver.title, "WARNING")
-            return {"reason": "failed_to_close"}
-    # If there's no error dialog, we were successful. Move on.
-    else:
-        # No error dialog
-        return {"reason": "no_dialog"}
-
-
-def signIn(driver: webdriver, username: str, password: str) -> None:
+def signIn(driver: WebDriver, username: str, password: str) -> None:
     """Signs into edx.org"""
     # Locations
     login_page = "https://authn.edx.org/login"
@@ -291,7 +203,7 @@ def signIn(driver: webdriver, username: str, password: str) -> None:
             selenium_exceptions.TimeoutException,
             selenium_exceptions.InvalidSessionIdException,
         ):
-            log(traceback.print_exc(), "WARNING")
+            log(str(traceback.print_exc()), "WARNING")
             login_fail = driver.find_elements(By.CSS_SELECTOR, "#login-failure-alert")
             if len(login_fail) > 0:
                 log("Incorrect login or password")
@@ -316,7 +228,123 @@ def signIn(driver: webdriver, username: str, password: str) -> None:
     sys.exit("Login issue or course dashboard page timed out.")
 
 
-def addStaff(driver: webdriver, email_list: list[str]) -> None:
+def userIsPresent(driver: WebDriver, email: str) -> bool:
+    """Checks to see if user is already on course team. Returns boolean."""
+    log("Is " + email + " present?")
+
+    is_admin_xpath = "//a[text()='" + email.lower() + "']"
+    user_present = driver.find_elements(By.XPATH, is_admin_xpath)
+    if len(user_present) > 0:
+        log(email + " on the course team.")
+        return True
+    else:
+        log(email + " is not on the course team.")
+        return False
+
+
+def userIsStaff(driver: WebDriver, email: str) -> bool:
+    """Checks to see if user is staff. Returns boolean."""
+    staff_user_xpath = (
+        "//span[contains(@class, 'badge-current-user') and contains(text(), 'Staff')]"
+        + "//following-sibling::a[contains(@href, '"
+        + email.lower()
+        + "')]"
+    )
+    staff_flag = driver.find_elements(By.XPATH, staff_user_xpath)
+    if len(staff_flag) > 0:
+        log(email + " is staff.")
+        return True
+    else:
+        log(email + " is not staff.")
+        return False
+
+
+def userIsAdmin(driver: WebDriver, email: str) -> bool:
+    """
+    Checks to see whether the user we're signed in as is admin.
+    If not, we can't do anything - you need to be admin to make changes.
+    Returns boolean.
+    """
+
+    # Xpath to find the admin flag for this user.
+    is_admin_xpath = (
+        "//span[contains(@class, 'badge-current-user') and contains(text(), 'Admin')]"
+        + "//following-sibling::a[contains(@href, '"
+        + email.lower()
+        + "')]"
+    )
+
+    admin_flag = driver.find_elements(By.XPATH, is_admin_xpath)
+    if len(admin_flag) > 0:
+        log(email + " is admin.")
+        return True
+    else:
+        log(email + " is not admin.")
+        return False
+
+
+def getAllUsers(driver: WebDriver) -> dict:
+    """
+    Returns a dictionary with two lists of e-mail addresses: staff and admin.
+    """
+
+    staff_xpath = "//span[contains(@class, 'badge-current-user') and contains(text(), 'Staff')]/following-sibling::a"
+    admin_xpath = "//span[contains(@class, 'badge-current-user') and contains(text(), 'Admin')]/following-sibling::a"
+
+    all_staff = driver.find_elements(By.XPATH, staff_xpath)
+    all_admins = driver.find_elements(By.XPATH, admin_xpath)
+    staff_list = [x.text for x in all_staff]
+    admin_list = [y.text for y in all_admins]
+
+    return {"staff": staff_list, "admin": admin_list}
+
+
+def closeErrorDialog(driver: WebDriver) -> dict:
+    """
+    Closes error dialogs on the course staff page. Can't go on without that.
+
+    Returns info about the dialog.
+        If there was none, it's "no_dialog"
+        If we closed it and they weren't a user, it's "no_user"
+        If we couldn't close the dialog, it's "failed_to_close"
+    """
+
+    log("Checking for error dialog")
+
+    # Try to find the "ok" button for the error dialogs.
+    wrong_email_css = "div[aria-label='Error adding user'] button"
+
+    # If there is an error dialog open, report why, clear it, and move on.
+    try:
+        log("Finding error dialog")
+        wrong_email_ok_button = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, wrong_email_css))
+        )
+        if wrong_email_ok_button is None:
+            log("No error dialog found.")
+            return {"reason": "no_dialog"}
+        else:
+            log("Error dialog found.")
+    except Exception as e:
+        # If there was no error dialog, we can move on.
+        # log(str(e))
+        log("No error dialog found.")
+        return {"reason": "no_dialog"}
+
+    try:
+        # No user with specified e-mail address.
+        # (At least, that's the only current error shown.)
+        wrong_email_ok_button.click()
+        return {"reason": "no_user"}
+    except Exception as e:
+        # Couldn't close the error dialog.
+        # log(repr(e), "DEBUG")
+        log("Could not close error dialog for " + driver.title, "WARNING")
+        log(str(e), "DEBUG")
+        return {"reason": "failed_to_close"}
+
+
+def addStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Adds a list of users as course staff via e-mail address. You can promote them to admin later."""
 
     # Locations for add-staff inputs
@@ -324,23 +352,28 @@ def addStaff(driver: webdriver, email_list: list[str]) -> None:
     new_staff_email_xpath = "//input[@name='email']"
     add_user_xpath = "//button[text()='Add user']"
 
+    log("Adding staff to " + driver.title)
+
     # For each address:
     for email in email_list:
-        success = False
+        log("Adding " + email)
 
         # If the user is already present, move to the next e-mail address.
         if userIsPresent(driver, email):
             log(email + " is already on course team.")
             continue
+        else:
+            log(email + " is not on course team yet.")
 
         # Retry up to 3 times.
+        success = False
         for x in range(0, 3):
-            log("Trying to add " + email)
 
             try:
                 # Click the "New Team Member" button
                 new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
                 new_team_buttons[0].click()
+                log("Clicked 'New Team Member'")
             except Exception as e:
                 # If that failed, there could be an error message up. Try to close it.
                 closeErrorDialog(driver)
@@ -361,9 +394,8 @@ def addStaff(driver: webdriver, email_list: list[str]) -> None:
                     success = True
                     break
                 else:
-                    # Clear the dialog and move on to the next e-mail.
+                    # Clear the dialog and try again (or move on).
                     closeErrorDialog(driver)
-                    break
 
             except Exception as e:
                 # If the stuff above failed, it's probably because
@@ -372,7 +404,7 @@ def addStaff(driver: webdriver, email_list: list[str]) -> None:
                 # log(repr(e), "DEBUG")
 
         if success:
-            log("Added " + email)
+            log("Successfully added " + email)
         else:
             log("Could not add " + email)
             closeErrorDialog(driver)
@@ -380,42 +412,28 @@ def addStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
+def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Promotes a list of staff users to admin."""
 
     # For each address:
     for email in email_list:
+        log("Promoting " + email)
 
         success = False
 
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Add admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
-
         # Find the "Add admin access" button for this user.
         promotion_xpath = (
-            "//div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-info')]"
-            + "//a[text()='"
-            + email
-            + "']"
-            + "/ancestor::div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-actions')]"
-            + "//button[text()='Add admin access']"
+            "//a[contains(@href, '"
+            + email.lower()
+            + "')]/ancestor::div[contains(@class, 'member-info')]"
+            + "//following-sibling::div[contains(@class, 'member-actions')]"
+            + "//button[contains(text(), 'Add admin access')]"
         )
 
         if userIsStaff(driver, email):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                log("Promoting " + email)
                 try:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(By.XPATH, promotion_xpath)
@@ -446,44 +464,37 @@ def promoteStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def removeStaff(driver: webdriver, email_list: list[str]) -> None:
+def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
     """
     Removes a list of users from the course staff.
     If they're admin you have to demote them first.
     """
 
-    confirm_removal_xpath = "//div[@class='pgn__modal-footer']//button[text()='Delete']"
+    log("Removing staff from " + driver.title)
+
+    confirm_removal_xpath = "//div[contains(@aria-label, 'Delete course team member')]//button[text()='Delete']"
 
     # For each address:
     for email in email_list:
 
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Add admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
+        log("Removing " + email)
+
+        # If this user isn't present, move on to the next one.
+        if not userIsPresent(driver, email):
+            log(email + " was already not in this course.")
+            continue
 
         # Find the delete button for this user.
         removal_xpath = (
             "//div[contains(@class, 'course-team-member')]"
             + "//div[contains(@class, 'member-info')]"
             + "//a[text()='"
-            + email
+            + email.lower()
             + "']"
             + "/ancestor::div[contains(@class, 'course-team-member')]"
             + "//div[contains(@class, 'member-actions')]"
             + "//button[@data-testid='delete-button']"
         )
-
-        # If this user isn't present, move on to the next one.
-        if not userIsPresent(driver, email):
-            log(email + " was already not in this course.")
-            continue
 
         success = False
 
@@ -495,8 +506,10 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
                 remove_button[0].click()
                 # Click the "confirm" button.
                 log("Trying to remove " + email)
-                confirm_button = driver.find_elements(By.XPATH, confirm_removal_xpath)
-                confirm_button[0].click()
+                confirm_button = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, confirm_removal_xpath))
+                )
+                confirm_button.click()
                 success = True
                 break
 
@@ -513,41 +526,30 @@ def removeStaff(driver: webdriver, email_list: list[str]) -> None:
     return
 
 
-def demoteStaff(driver: webdriver, email_list: list[str]) -> None:
+def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
     """Demotes a list of admin users to staff."""
+
+    log("Demoting staff in " + driver.title)
 
     # For each address:
     for email in email_list:
+        log("Demoting " + email)
 
         success = False
-        # Structure:
-        # <div class="course-team-member">
-        #  <div class="member-info">
-        #   <a>e-mail address</a>
-        #  </div>
-        #  <div class="member-actions">
-        #   <button>Remove admin access</button>
-        #   <button data-testid="delete-button"></button>
-        #  </div>
-        # </div>
 
         # Find the delete button for this user.
         demotion_xpath = (
-            "//div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-info')]"
-            + "//a[text()='"
-            + email
-            + "']"
-            + "/ancestor::div[contains(@class, 'course-team-member')]"
-            + "//div[contains(@class, 'member-actions')]"
-            + "//button[text()='Remove admin access']"
+            "//a[contains(@href, '"
+            + email.lower()
+            + "')]/ancestor::div[contains(@class, 'member-info')]"
+            + "//following-sibling::div[contains(@class, 'member-actions')]"
+            + "//button[contains(text(), 'Remove admin access')]"
         )
 
         if userIsAdmin(driver, email):
 
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
-                log("Demoting " + email)
                 try:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(By.XPATH, demotion_xpath)
@@ -588,10 +590,8 @@ def ReplaceEdXStaff():
     trimLog()
 
     num_classes = 0
-    num_classes_fixed = 0
     skipped_classes = []
     staffed_classes = []
-    unfound_addresses = []
     run_headless = True
     timeouts = 0
     too_many_timeouts = 3
@@ -640,6 +640,19 @@ the script is to run. Press control-C to cancel.
     driver = setUpWebdriver(run_headless, driver_choice)
     signIn(driver, username, password)
 
+    # We have to open the Studio outline in order to avoid CORS issues for some reason.
+    driver.get("https://studio.edx.org/home")
+    # This redirects to https://course-authoring.edx.org/home , but we actually want to get the redirect!
+    # When the input with id pgn-searchfield-input-1 shows up we're good to continue.
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "pgn-searchfield-input-1"))
+        )
+    except selenium_exceptions.TimeoutException:
+        log("Studio page load timed out.", "CRITICAL")
+        driver.quit()
+        sys.exit("Studio page load timed out.")
+
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
 
@@ -651,18 +664,51 @@ the script is to run. Press control-C to cancel.
             # log("Processing line:", "DEBUG")
             # log(each_row, "DEBUG")
 
-            # Open the URL. Skip lines without one.
             if each_row["URL"] == "":
                 continue
 
-            num_classes += 1
-            driver.get(each_row["URL"].strip())
-
             # Skip CS50 courses unless we've specifically asked to include them.
-            if "cs50" in driver.title.lower() and not args.cs50:
+            if "cs50" in each_row["URL"].lower() and not args.cs50:
                 log("Skipping CS50 course " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
+
+            """
+            # This was perhaps not the right thing; still uncertain.
+            # Because of reasons, we have to open the course outline page
+            # and CLICK to the course team page from there.
+            course_outline_page = (
+                str(each_row["URL"]).strip().replace("course_team", "")
+            )
+            driver.get(course_outline_page)
+
+            # When the #Settings-dropdown-menu is present, we're good to move on.
+            course_outline_css = ".course-outline-section"
+            try:
+                log("Finding course outline page...")
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, course_outline_css)
+                    )
+                )
+            except selenium_exceptions.TimeoutException:
+                log("Outline timed out. Skipping course " + each_row["URL"])
+                skipped_classes.append(each_row)
+                continue
+
+
+            # Click the "Settings" button.
+            settings_menu_css = "#Settings-dropdown-menu"
+            course_team_link = driver.find_element(By.CSS_SELECTOR, settings_menu_css)
+            course_team_link.click()
+            # Click the "Course Team" link on the resulting dropdown menu.
+            course_team_xpath = "//a[contains(text(), 'Course Team')]"
+            course_team_link = driver.find_element(By.XPATH, course_team_xpath)
+            course_team_link.click()"
+            """
+
+            driver.get(each_row["URL"].strip())
+            num_classes += 1
 
             # Check to make sure we've opened a new page.
             # The e-mail input box should be invisible.
@@ -695,7 +741,6 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # If we only need to get users and status, we can do that easier.
-            # TODO: ...but we actually have to fix this, so...
             if args.list:
                 log("Getting staff for " + each_row["URL"])
                 user_list = getAllUsers(driver)
@@ -710,7 +755,7 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # Check to make sure we have the ability to change user status.
-            if not userIsAdmin(driver, username):
+            if not userIsAdmin(driver, username.lower()):
                 log("\nUser is not admin in " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
@@ -726,8 +771,8 @@ the script is to run. Press control-C to cancel.
             jobs = {
                 "Add": addStaff,
                 "Promote": promoteStaff,
-                "Remove": removeStaff,
                 "Demote": demoteStaff,
+                "Remove": removeStaff,
             }
             for j in jobs:
                 if each_row[j] is None:
