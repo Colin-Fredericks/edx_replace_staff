@@ -60,6 +60,7 @@ When you have multiple people in any of these categories, space-separate them. Y
 This repo includes a Mac version of geckodriver for Firefox, which is under the [Mozilla Public License 2.0](https://github.com/mozilla/geckodriver/blob/master/LICENSE). If you need a different version of the driver you'll have to replace that file (using the same name). It also includes the [Chrome webdriver](https://chromedriver.chromium.org/), which of course has its own [separate set of terms](https://chromium.googlesource.com/chromium/src/+/HEAD/LICENSE). If you have Safari, you already have safaridriver available, though you may have to [enable it](https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari).
 
 Since geckodriver is not a signed Mac application it will throw a warning the first time you run it. Go to System Preferences --> Security and Privacy and tell it to open anyway. You should be able to run it just fine on the next attempt.
+
 ## Instructions
 
 To install and use for the first time:
@@ -87,14 +88,16 @@ To install and use for the first time:
 
 On later runs you can do a simpler version:
 
-  $> source edxstaff/bin/activate
-  (edxstaff) $> edx_replace_staff /path/to/input/csv
-  (edxstaff) $> deactivate
+    $> source edxstaff/bin/activate
+    (edxstaff) $> edx_replace_staff /path/to/input/csv
+    (edxstaff) $> deactivate
 
 Run the whole process from the top if you need to reinstall (for instance, if the script and/or its requirements change).
 
-## Command-line options:
+## Command-line options
 
+* -c or --chrome: use Chrome instead of the default Firefox.
+* --cs50: don't skip cs50 courses
 * -h or --help: print the instructions and quit.
 * -l or --list: list staff in each course, make no changes.
 * -v or --visible: run with a visible browser instead of a headless one.
