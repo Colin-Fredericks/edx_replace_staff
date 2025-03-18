@@ -3,7 +3,6 @@ attrs==25.3.0
 certifi==2025.1.31
 cffi==1.17.1
 cryptography==44.0.2
-edx_replace_staff @ file:///Users/cfredericks/Documents/GitHub/edx_replace_staff
 h11==0.14.0
 idna==3.10
 outcome==1.3.0.post0
