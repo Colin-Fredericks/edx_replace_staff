@@ -660,7 +660,8 @@ the script is to run. Press control-C to cancel.
                 continue
 
             # Skip pre-2015 URL patterns that will no longer work.
-            if "Harvard/" in each_row["URL"]:
+            # The newer one has a + instead of a /
+            if "HarvardX/" in each_row["URL"]:
                 logger.info("Skipping course with old URL scheme: " + each_row["URL"])
                 skipped_classes.append(each_row)
                 continue
