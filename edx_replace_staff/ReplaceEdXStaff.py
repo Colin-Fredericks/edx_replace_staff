@@ -113,7 +113,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
         op.timeouts = {"implicit": 1000}
         if run_headless:
             op.add_argument("--headless")
-        service = webdriver.ChromeService(
+        webdriver.ChromeService(
             executable_path=os.path.join(repo_path, "edx_replace_staff/chromedriver")
         )
         driver = webdriver.Chrome(options=op)
@@ -123,7 +123,7 @@ def setUpWebdriver(run_headless: bool, driver_choice: str = "firefox") -> WebDri
         op.timeouts = {"implicit": 1000}
         if run_headless:
             op.add_argument("-headless")
-        service = webdriver.FirefoxService(
+        webdriver.FirefoxService(
             executable_path=os.path.join(repo_path, "edx_replace_staff/geckodriver")
         )
         driver = webdriver.Firefox(options=op)
@@ -151,7 +151,7 @@ def signIn(driver: WebDriver, username: str, password: str) -> None:
     while login_count < 3:
         # Sign in
         try:
-            found_username_field = WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, username_input_css))
             )
         except selenium_exceptions.TimeoutException:
@@ -315,7 +315,7 @@ def closeErrorDialog(driver: WebDriver) -> dict:
             return {"reason": "no_dialog"}
         else:
             logger.debug("Error dialog found.")
-    except Exception as e:
+    except Exception:
         # If there was no error dialog, we can move on.
         logger.debug("No error dialog found.")
         return {"reason": "no_dialog"}
@@ -362,7 +362,7 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
                 new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
                 new_team_buttons[0].click()
                 logger.debug("Clicked 'New Team Member'")
-            except Exception as e:
+            except Exception:
                 # If that failed, there could be an error message up. Try to close it.
                 closeErrorDialog(driver)
 
@@ -385,7 +385,7 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
                     # Clear the dialog and try again (or move on).
                     closeErrorDialog(driver)
 
-            except Exception as e:
+            except Exception:
                 # If the stuff above failed, it's probably because
                 # one of the elements hasn't been added to the page yet.
                 logger.warning("Couldn't add " + email + ", trying again...")
@@ -425,7 +425,7 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                 try:
                     # Find the promotion button for this user.
                     promotion_button = driver.find_elements(By.XPATH, promotion_xpath)
-                except:
+                except Exception:
                     logger.warning(
                         "No promotion button found. You may not have Admin access. Trying again..."
                     )
@@ -434,7 +434,7 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     promotion_button[0].click()
                     success = True
                     break
-                except Exception as e:
+                except Exception:
                     logger.debug("Couldn't click promotion button. Trying again...")
         else:
             if userIsAdmin(driver, email):
@@ -501,7 +501,7 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
                 success = True
                 break
 
-            except Exception as e:
+            except Exception:
                 # logger.debug(repr(e))
                 # Keep trying up to 3 times.
                 logger.debug("Trying again...")
@@ -541,7 +541,7 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                 try:
                     # Find the demotion button for this user.
                     demotion_button = driver.find_elements(By.XPATH, demotion_xpath)
-                except:
+                except Exception:
                     logger.warning(
                         "Couldn't find demotion button. You may not have Admin access. Trying again..."
                     )
@@ -550,7 +550,7 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
                     demotion_button[0].click()
                     success = True
                     break
-                except Exception as e:
+                except Exception:
                     logger.debug("Couldn't click demotion button. Trying again...")
         else:
             if userIsStaff(driver, email):
@@ -678,7 +678,7 @@ the script is to run. Press control-C to cancel.
                     )
                 )
                 timeouts = 0
-            except Exception as e:
+            except Exception:
                 # logger.debug(repr(e))
                 # If we can't open the URL, make a note and skip this course.
                 skipped_classes.append(each_row)
