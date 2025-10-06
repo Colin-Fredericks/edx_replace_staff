@@ -51,7 +51,7 @@ Options:
 
 # Prep the logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
     "%(asctime)s : %(funcName)s : %(levelname)s : %(message)s"
 )
@@ -222,8 +222,8 @@ def userIsPresent(driver: WebDriver, email: str) -> bool:
     """Checks to see if user is already on course team. Returns boolean."""
     logger.debug("Is " + email + " present?")
 
-    is_admin_xpath = "//a[text()='" + email.lower() + "']"
-    user_present = driver.find_elements(By.XPATH, is_admin_xpath)
+    is_staff_xpath = "//a[contains(@href,'" + email.lower() + "')]"
+    user_present = driver.find_elements(By.XPATH, is_staff_xpath)
     if len(user_present) > 0:
         logger.debug(email + " is on the course team.")
         return True
@@ -356,7 +356,6 @@ def addStaff(driver: WebDriver, email_list: list[str]) -> None:
         # Retry up to 3 times.
         success = False
         for x in range(0, 3):
-
             try:
                 # Click the "New Team Member" button
                 new_team_buttons = driver.find_elements(By.XPATH, new_team_xpath)
@@ -419,7 +418,6 @@ def promoteStaff(driver: WebDriver, email_list: list[str]) -> None:
         )
 
         if userIsStaff(driver, email):
-
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
                 try:
@@ -464,7 +462,6 @@ def removeStaff(driver: WebDriver, email_list: list[str]) -> None:
 
     # For each address:
     for email in email_list:
-
         logger.debug("Removing " + email)
 
         # If this user isn't present, move on to the next one.
@@ -535,7 +532,6 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
         )
 
         if userIsAdmin(driver, email):
-
             # Keep trying up to 3 times in case we're still loading.
             for x in range(0, 3):
                 try:
@@ -572,7 +568,6 @@ def demoteStaff(driver: WebDriver, email_list: list[str]) -> None:
 
 
 def ReplaceEdXStaff():
-
     trimLog()
 
     num_classes = 0
@@ -626,6 +621,7 @@ the script is to run. Press control-C to cancel.
     driver = setUpWebdriver(run_headless, driver_choice)
     signIn(driver, username, password)
 
+    """
     # We have to open the Studio outline in order to avoid CORS issues for some reason.
     driver.get("https://studio.edx.org/home")
     # This redirects to https://course-authoring.edx.org/home , but we actually want to get the redirect!
@@ -638,10 +634,10 @@ the script is to run. Press control-C to cancel.
         logger.error("Studio page load timed out.")
         driver.quit()
         sys.exit("Studio page load timed out.")
+    """
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
-
         logger.info("Opening csv file.")
         reader = csv.DictReader(file)
 
