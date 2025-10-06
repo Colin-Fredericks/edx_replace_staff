@@ -51,7 +51,7 @@ Options:
 
 # Prep the logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter(
     "%(asctime)s : %(funcName)s : %(levelname)s : %(message)s"
 )
@@ -299,14 +299,12 @@ def closeErrorDialog(driver: WebDriver) -> dict:
         If we couldn't close the dialog, it's "failed_to_close"
     """
 
-    logger.debug("Checking for error dialog")
-
     # Try to find the "ok" button for the error dialogs.
     wrong_email_css = "div[aria-label='Error adding user'] button"
 
     # If there is an error dialog open, report why, clear it, and move on.
     try:
-        logger.debug("Finding error dialog")
+        logger.debug("Checking for error dialog")
         wrong_email_ok_button = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, wrong_email_css))
         )
@@ -621,7 +619,6 @@ the script is to run. Press control-C to cancel.
     driver = setUpWebdriver(run_headless, driver_choice)
     signIn(driver, username, password)
 
-    """
     # We have to open the Studio outline in order to avoid CORS issues for some reason.
     driver.get("https://studio.edx.org/home")
     # This redirects to https://course-authoring.edx.org/home , but we actually want to get the redirect!
@@ -634,7 +631,6 @@ the script is to run. Press control-C to cancel.
         logger.error("Studio page load timed out.")
         driver.quit()
         sys.exit("Studio page load timed out.")
-    """
 
     # Open the csv and read it to a set of dicts
     with open(args.csvfile, "r") as file:
